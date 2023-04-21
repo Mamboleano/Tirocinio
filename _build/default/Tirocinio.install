@@ -1,0 +1,11 @@
+lib: [
+  "_build/install/default/lib/Tirocinio/META"
+  "_build/install/default/lib/Tirocinio/dune-package"
+  "_build/install/default/lib/Tirocinio/opam"
+]
+bin: [
+  "_build/install/default/bin/Tirocinio.exe"
+]
+doc: [
+  "_build/install/default/doc/Tirocinio/README.md"
+]
