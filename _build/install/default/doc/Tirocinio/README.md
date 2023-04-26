@@ -1,2 +1,2 @@
 # Tirocinio
- Progetto per il percorso di Toricinio
+ Progetto per il percorso di Tirocinio

@@ -1,1 +1,1 @@
-lib/printing.ml: PlaceSet TransitionSet Types
+lib/printing.ml: FlowSet InhibitorSet PlaceSet TransitionSet Types
