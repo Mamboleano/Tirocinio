@@ -3,14 +3,17 @@
 (** @canonical Tirocinio.Exceptions *)
 module Exceptions = Tirocinio__Exceptions
 
+(** @canonical Tirocinio.Nets *)
+module Nets = Tirocinio__Nets
+
 (** @canonical Tirocinio.Printing *)
 module Printing = Tirocinio__Printing
 
 (** @canonical Tirocinio.Proprieties *)
 module Proprieties = Tirocinio__Proprieties
 
-(** @canonical Tirocinio.Types *)
-module Types = Tirocinio__Types
+(** @canonical Tirocinio.Sets *)
+module Sets = Tirocinio__Sets
 
 (** @canonical Tirocinio.Utils *)
 module Utils = Tirocinio__Utils

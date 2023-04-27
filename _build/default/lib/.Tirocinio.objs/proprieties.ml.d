@@ -1,1 +1,1 @@
-lib/proprieties.ml: PlaceSet Types Utils
+lib/proprieties.ml:
