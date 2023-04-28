@@ -43,3 +43,7 @@ print_bool (IPT.is_enabled a c1);;
 print_endline "prova fire";;
 IPT.fire_seq a c1;;
 IPT.print c1;;
+
+let cr = CN.causality_relation c1;;
+
+CN.CausalityRelation.print cr;;
