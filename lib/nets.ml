@@ -12,17 +12,20 @@ struct
         mutable marking : PlaceSet.t;
       }
 
+      (* We say that an arc n1 -> n2 is valid iff n1 is a Place that belongs to S and n2 is a Transition that belongs to T or viceversa *)
       let valid_arc (arc : Flow.t) ipt = match arc with
         {source = S(n); target = T(s)}
       | {source = T(s); target = S(n)} -> (PlaceSet.mem n ipt.places) && (TransitionSet.mem s ipt.transitions)
       | _ -> raise IllegalArc
 
+      (* We say that the flow relation is valid iff all the arcs of the relation itself are valid*)
       let valid_flow ipt = 
         FlowSet.for_all
         (fun arc -> valid_arc arc ipt)
         ipt.flow
         
 
+      (* Function that pretty prints an IPT with all its sets*)
       let print ipt = 
       print_endline "\nPlaces:";
       PlaceSet.print ipt.places;
@@ -39,7 +42,7 @@ struct
       print_endline "\nMarking:";
       PlaceSet.print ipt.marking
 
-    
+    (* This function returns the transitions for which the place s is the output *)
     let preset_of_place s ipt =
 
       let f' = FlowSet.filter (fun y -> y.target = S(s)) ipt.flow in 
@@ -48,6 +51,7 @@ struct
       TransitionSet.empty in 
       preset
 
+    (* This function returns the transitions for which the place s is the input *)
     let postset_of_place s ipt =
 
       let f' = FlowSet.filter (fun y -> y.source = S(s)) ipt.flow in 
@@ -57,6 +61,7 @@ struct
       
       postset
 
+    (* This function returns the places which are the inputs of the transition t *)
     let preset_of_transition t ipt =
 
       let f' = FlowSet.filter (fun y -> y.target = T(t)) ipt.flow in 
@@ -66,6 +71,7 @@ struct
       
       preset
 
+    (* This function returns the places which are the outputs of the transition t *)
     let postset_of_transition t ipt =
 
       let f' = FlowSet.filter (fun y -> y.source = T(t)) ipt.flow in 
@@ -75,6 +81,7 @@ struct
       
       postset
 
+    (* This function returns the places which are the inhibitors of the transition t *)
     let inhibitors_of_transition t ipt =
 
       let f' = InhibitorSet.filter (fun y -> y.target = T(t)) ipt.inhibitors in 
@@ -84,17 +91,19 @@ struct
       
     inhibitors
   
+    (* Given a set of transitions a, this function returns the set of places that is the union of all presets of the transitions in a *)
+    let preset_of_TransitionSet a ipt = 
+      TransitionSet.fold (fun t ss -> PlaceSet.union (preset_of_transition t ipt) ss) a PlaceSet.empty
 
-    let preset_of_TransitionSet s ipt = 
-      TransitionSet.fold (fun t ss -> PlaceSet.union (preset_of_transition t ipt) ss) s PlaceSet.empty
-
-    let postset_of_TransitionSet s ipt = 
-      TransitionSet.fold (fun t ss -> PlaceSet.union (postset_of_transition t ipt) ss) s PlaceSet.empty
+    (* Given a set of transitions a, this function returns the set of places that is the union of all postsets of the transitions in a *)
+    let postset_of_TransitionSet a ipt = 
+      TransitionSet.fold (fun t ss -> PlaceSet.union (postset_of_transition t ipt) ss) a PlaceSet.empty
     
-    
-    let inhibitors_of_TransitionSet s ipt =
-      TransitionSet.fold (fun t ss -> PlaceSet.union (inhibitors_of_transition t ipt) ss) s PlaceSet.empty
+    (* Given a set of transitions a, this function returns the set of places that is the union of all inhibitors of the transitions in a *)
+    let inhibitors_of_TransitionSet a ipt =
+      TransitionSet.fold (fun t ss -> PlaceSet.union (inhibitors_of_transition t ipt) ss) a PlaceSet.empty
 
+    (* Given a set of transitions a, this function returns true iff a is enabled at the current marking of the ipt *)
     let is_enabled a ipt =
       let preset_a = preset_of_TransitionSet a ipt in
       let postset_a = postset_of_TransitionSet a ipt in
@@ -105,7 +114,8 @@ struct
       (PlaceSet.for_all (fun x ->  not (PlaceSet.mem x ipt.marking) && not (PlaceSet.mem x postset_a)) inhibset_a)
     
     
-    (* Conflicts and other relations are yet to be included *)
+    (* Given a set of transitions a, this function fires a at the current marking of ipt,
+        only if a is enabled, and if so, it then modifies the marking of the ipt*)
     let fire_seq a ipt =
       let preset_a = preset_of_TransitionSet a ipt in
       let postset_a = postset_of_TransitionSet a ipt in
@@ -120,11 +130,153 @@ struct
       let inhibitors_t' = inhibitors_of_transition t' cn in 
       not (PlaceSet.is_empty (PlaceSet.inter preset_t inhibitors_t'))
 
-
-    let conflict_with t t' cn = 
+    (* returns true iff t #. t'*)
+    let in_conflict t t' cn = 
       let preset_t = preset_of_transition t cn in
       let preset_t' = preset_of_transition t' cn in
       not (PlaceSet.is_empty (PlaceSet.inter preset_t preset_t'))
+
+end;;
+
+module Causality = 
+struct
+  type t = {cause : transition ; effect : transition}
+  let compare = compare
+
+  (* Given the tuple t <. t', returns t *)
+  let cause_of {cause = x; effect = _} = x
+
+  (* Given the tuple t <. t', returns t' *)
+  let effect_of {cause = _; effect = x} = x
+
+  let to_string {cause = t; effect = t'} = (Transition.to_string t) ^ " < " ^ (Transition.to_string t')
+  let print x = print_endline (to_string x)
+
+end;;
+
+module CausalityRelation = 
+struct
+
+  include Set.Make(Causality)
+
+  let print s = iter Causality.print s
+
+  (* Given an ipt, this function returns the set representing the Causality Relation of that ipt *)
+  let build ipt =
+
+    (* This auxilary function builds a set of Causality tuples in which t is always the effect *)
+    let helper t tt = 
+      TransitionSet.fold 
+      (fun x cc -> add {cause = x; effect = t} cc)
+      tt
+      empty
+    in
+
+    (* This auxilary function returns a set of transitions that represents the causes of the transition t *)
+    let helper_causes_of t ipt = 
+      TransitionSet.fold 
+      (fun x tt -> if IPT.caused_by t x ipt then TransitionSet.add x tt else tt)
+      (TransitionSet.remove t ipt.transitions)
+      TransitionSet.empty 
+    in
+    
+    TransitionSet.fold 
+    (fun x cc -> union (helper x (helper_causes_of x ipt)) cc)
+    ipt.transitions
+    empty
+  
+  (* This function returns the set of transitions that are all the causes of the transition t
+
+     side note: more efficient than the helper function defined above,
+      because this uses the tuples of the Causality Relation alredy built *)
+  let causes_of t cr = fold
+    (fun c tt -> if (Causality.effect_of c) = t then TransitionSet.add (Causality.cause_of c) tt else tt)
+    cr
+    TransitionSet.empty
+
+  (* This function returns the set of transitions that are all the effects of the transition t *)
+  let effects_of t cr = fold
+  (fun c tt -> if (Causality.cause_of c) = t then TransitionSet.add (Causality.effect_of c) tt else tt)
+  cr
+  TransitionSet.empty
+  
+  (* This function returns the set of transitions that are the cause of some transition t *)
+  let causes cr = fold 
+    (fun x tt-> TransitionSet.add (Causality.cause_of x) tt)
+    cr 
+    TransitionSet.empty
+  (* This function returns the set of transitions that are the effect of some transition t *)
+  let effects cr = fold 
+    (fun x tt-> TransitionSet.add (Causality.effect_of x) tt)
+    cr 
+    TransitionSet.empty
+  
+  (* This function checks if the causality relation is irreflecive, i.e. not(a <. a) *)
+  let is_irreflexive cr = TransitionSet.fold
+    (fun x b -> not (mem {cause = x ; effect = x} cr) && b)
+    (causes cr)
+    true
+  
+  (* This function checks if the causality relation is asymmetric, i.e. if a <. b and b <. a then a = b *)
+  let is_asymmetric cr = fold
+    (fun {cause = c; effect = e} b -> not(mem {cause = e; effect = c} cr) && b)
+    cr
+    true
+
+
+  (* This function checks if the causality relation is transitive, i.e. if a <. b and b <.c then a <. c *)
+  let is_transitive cr = 
+    let helper bb cr = TransitionSet.fold 
+      (fun b cc -> TransitionSet.union (causes_of b cr) cc)
+      bb
+      TransitionSet.empty
+    in
+
+    TransitionSet.fold
+    (fun a b -> (TransitionSet.subset (helper (causes_of a cr) cr) (causes_of a cr)) && b)
+    (causes cr)
+    true
+
+  (* This function check if the causality relation is an Irreflexive Partial Order,
+      i.e. if it is irreflexive, asymmetric and transitive *)
+  let is_IPO cr = (is_irreflexive cr) && (is_asymmetric cr) && (is_transitive cr)
+  
+end;;
+
+
+module Conflict = 
+struct
+  type t = {t1 : transition ; t2 : transition}  
+  let compare = compare 
+
+  let to_string tt = Transition.to_string tt.t1 ^ " # " ^ Transition.to_string tt.t2
+
+  let print x = print_endline (to_string x)
+
+end;;
+
+module ConflictRelation = 
+struct
+  include Set.Make(Conflict) 
+  let print s = iter Conflict.print s
+
+   (* Given an ipt, this function returns the set representing the Conflict Relation of that ipt  *)
+  let build ipt = 
+
+    (* Given a transition t, this helper function returns the Conflict Relation made of the couples (t1,t2),
+        where t1 = t and t2 is some transition in conflict with t *)
+    let helper t ipt = 
+      TransitionSet.fold
+      (fun x cc -> if IPT.in_conflict t x ipt then add {t1 = t ; t2 = x} cc else cc)
+      (TransitionSet.remove t ipt.transitions)
+      empty
+
+    in
+
+    TransitionSet.fold
+    (fun x cc -> union (helper x ipt) cc)
+    ipt.transitions
+    empty
 
 end;;
 
@@ -134,140 +286,99 @@ struct
   
 include IPT 
 
-  module Causality = 
-  struct
-    type t = {cause : transition ; effect : transition}
-    let compare = compare
+  (* Given an ipt, this function return its causal relation *)
+  let causality_relation ipt = CausalityRelation.build ipt
 
-    let cause_of {cause = x; effect = _} = x
-    let effect_of {cause = _; effect = x} = x
+  (* Given an ipt, this function return its conflict relation *)
+  let conflict_relation ipt = ConflictRelation.build ipt
 
-    let to_string {cause = t; effect = t'} = (Transition.to_string t) ^ " < " ^ (Transition.to_string t')
-    let print x = print_endline (to_string x)
-
-  end;;
-
-  module CausalityRelation = 
-  struct
-
-    include Set.Make(Causality)
-
-    let print s = iter Causality.print s
-
-    let build cn = 
-      let helper t tt = 
-        TransitionSet.fold 
-        (fun x cc -> add {cause = x; effect = t} cc)
-        tt
-        empty
-      in
-
-      let helper_causes_of t cn = 
-        TransitionSet.fold 
-        (fun x tt -> if caused_by t x cn then TransitionSet.add x tt else tt)
-        (TransitionSet.remove t cn.transitions)
-        TransitionSet.empty 
-      in
-      
-      TransitionSet.fold 
-      (fun x cc -> union (helper x (helper_causes_of x cn)) cc)
-      cn.transitions
-      empty
-    
-    let causes_of t cr = fold
-      (fun c tt -> if (Causality.effect_of c) = t then TransitionSet.add (Causality.cause_of c) tt else tt)
-      cr
-      TransitionSet.empty
-
-
-    let effects_of t cr = fold
-    (fun c tt -> if (Causality.cause_of c) = t then TransitionSet.add (Causality.effect_of c) tt else tt)
-    cr
-    TransitionSet.empty
-
-    let causes cr = fold 
-      (fun x tt-> TransitionSet.add (Causality.cause_of x) tt)
-      cr 
-      TransitionSet.empty
-
-    let effects cr = fold 
-      (fun x tt-> TransitionSet.add (Causality.effect_of x) tt)
-      cr 
-      TransitionSet.empty
-
-    let is_irreflexive cr = TransitionSet.fold
-      (fun x b -> not (mem {cause = x ; effect = x} cr) && b)
-      (causes cr)
-      true
-    
-    let is_asymmetric cr = fold
-      (fun {cause = c; effect = e} b -> not(mem {cause = e; effect = c} cr) && b)
-      cr
-      true
-
-
-    (* if a <. b and b <.c then a <. c *)
-    let is_transitive cr = 
-      let helper bb cr = TransitionSet.fold 
-        (fun b cc -> TransitionSet.union (causes_of b cr) cc)
-        bb
-        TransitionSet.empty
-      in
-
-      TransitionSet.fold
-      (fun a b -> (TransitionSet.subset (helper (causes_of a cr) cr) (causes_of a cr)) && b)
-      (causes cr)
-      true
-
-    let is_IPO cr = (is_irreflexive cr) && (is_asymmetric cr) && (is_transitive cr)
-    
-  end;;
-
-  let causality_relation cn = CausalityRelation.build cn
-
-
-  let non_flow_causality cn = 
+  (* This function returns true iff the flow relation of the ipt does not define causality,
+      i.e. if all the places are not inputs and outputs of transitions *)
+  let non_flow_causality ipt = 
     TransitionSet.for_all 
     (fun t -> 
-      PlaceSet.for_all (fun s -> TransitionSet.is_empty (preset_of_place s cn)) (preset_of_transition t cn)
+      PlaceSet.for_all (fun s -> TransitionSet.is_empty (preset_of_place s ipt)) (preset_of_transition t ipt)
       )
-    cn.transitions
+      ipt.transitions
 
-    
-  let no_backward_conflicts cn = 
-      let postset_of_others t cn = 
-        postset_of_TransitionSet (TransitionSet.remove t cn.transitions) cn in 
+  (* This function returns true iff there are no backwards conflicts in the ipt,
+      i.e. a place belongs to at most to the postset of one transition *)  
+  let no_backward_conflicts ipt = 
+      let postset_of_others t ipt = 
+        postset_of_TransitionSet (TransitionSet.remove t ipt.transitions) ipt in 
       
       TransitionSet.for_all 
-      (fun t -> PlaceSet.is_empty (PlaceSet.inter (postset_of_transition t cn) (postset_of_others t cn)))
-      cn.transitions
+      (fun t -> PlaceSet.is_empty (PlaceSet.inter (postset_of_transition t ipt) (postset_of_others t ipt)))
+      ipt.transitions
     
-  let no_or_causality cn =
-    let preset_of_others t cn = 
-      preset_of_TransitionSet (TransitionSet.remove t cn.transitions) cn in 
+  (* This function returns true iff the ipt has no or-causality,
+      i.e. situations in which the the firing of a transition may have different causes *)
+  let no_or_causality ipt =
+    let preset_of_others t ipt = 
+      preset_of_TransitionSet (TransitionSet.remove t ipt.transitions) ipt in 
     
     TransitionSet.for_all 
     (fun t -> PlaceSet.is_empty 
       (PlaceSet.inter 
-        (inhibitors_of_TransitionSet cn.transitions cn)
+        (inhibitors_of_TransitionSet ipt.transitions ipt)
         (PlaceSet.inter
-          (preset_of_transition t cn)
-          (preset_of_others t  cn)
+          (preset_of_transition t ipt)
+          (preset_of_others t  ipt)
         )
       )
     )
-    cn.transitions
+    ipt.transitions
   
-   (* There is a propriety that requires the inhibitors of a transition to be finite, here we can only represent finite sets, hence it is verified *)
+   (* There is a propriety that requires the inhibitors of a transition to be finite, here we can only represent finite sets,
+       hence it is verified *)
 
-   let ipo_causality cn = CausalityRelation.is_IPO (CausalityRelation.build cn)
+   (* This function checks that the causality relation of the ipt is an irreflexive partial order,
+       as a consequence, if the ipt has no cycles in the dependencies arising from inhibitors *)
+   let ipo_causality ipt = CausalityRelation.is_IPO (causality_relation ipt)
 
-  (* 6th condition on hold, not different from building the causality relation *)
+  (* This functions checks that the set made of the causes of some transition t is conflict-free *)
+  let local_conflict_freeness ipt = 
+    let helper cs_t ipt = 
+      ConflictRelation.for_all 
+      (fun tt -> not ((TransitionSet.mem tt.t1 cs_t) && (TransitionSet.mem tt.t2 cs_t)))
+      (conflict_relation ipt)
+    in
 
-  let correct_marking cn = 
-    let b1 = PlaceSet.equal (postset_of_TransitionSet cn.transitions cn) cn.marking in
-    let b2 = PlaceSet.subset (inhibitors_of_TransitionSet cn.transitions cn) cn.marking in
+    TransitionSet.for_all
+    (fun t -> helper (CausalityRelation.causes_of t (causality_relation ipt)) ipt)
+    ipt.transitions 
+
+  (* This function checks that the initial marking of the ipt is a subset of the preset of all the transitions,
+      and that inhibitors of the ipt have places only present in the initial marking *)
+  let correct_marking ipt = 
+    let b1 = PlaceSet.equal (preset_of_TransitionSet ipt.transitions ipt) ipt.marking in
+    let b2 = PlaceSet.subset (inhibitors_of_TransitionSet ipt.transitions ipt) ipt.marking in
 
     b1 && b2
+  
+  (* This function checks if an ipt is also a pre-Causal Net, 
+     i.e. if all the proprieties described are verified in such ipt *)
+  let is_pCN ipt = 
+    (non_flow_causality ipt) &&
+    (no_backward_conflicts ipt) &&
+    (no_or_causality ipt) &&
+    (ipo_causality ipt) && 
+    (local_conflict_freeness ipt) &&
+    (correct_marking ipt)
 
+  (* This function checks if the Conflict Relation is inherited along the Causality Relation, 
+     i.e. if t #. t' and t' <. t'' then t #. t'' *)
+  let is_conflict_inherited ipt = 
+    ConflictRelation.for_all 
+    (fun x -> 
+      TransitionSet.for_all 
+      (fun y -> ConflictRelation.mem {t1 = x.t1 ; t2 = y} (conflict_relation ipt))
+      (CausalityRelation.effects_of x.t2 (causality_relation ipt))
+      )
+    (conflict_relation ipt)
+
+  (* This function checks if the given ipt is a CN, 
+     i.e. if the ipt is a pre-Causal Net and the Conflict Relation is inherited along the Causality Relation *)
+  let is_CN ipt = 
+    (is_pCN ipt) && (is_conflict_inherited ipt)
 end;;
