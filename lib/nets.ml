@@ -12,6 +12,13 @@ struct
         mutable marking : PlaceSet.t;
       }
 
+      let build s t f i m net = 
+        net.places <- s ;
+        net.transitions <- t;
+        net.flow <- f;
+        net.inhibitors <- i;
+        net.marking <- m
+
       (* We say that an arc n1 -> n2 is valid iff n1 is a Place that belongs to S and n2 is a Transition that belongs to T or viceversa *)
       let valid_arc (arc : Flow.t) ipt = match arc with
         {source = S(n); target = T(s)}
@@ -135,6 +142,18 @@ struct
       let preset_t = preset_of_transition t cn in
       let preset_t' = preset_of_transition t' cn in
       not (PlaceSet.is_empty (PlaceSet.inter preset_t preset_t'))
+
+    let non_shared_inputs t ipt = 
+
+      let t_set = TransitionSet.of_list [t] in
+
+      PlaceSet.fold 
+      (fun x ss -> 
+        if TransitionSet.equal (postset_of_place x ipt) t_set then 
+          PlaceSet.add x ss 
+        else ss)
+      (preset_of_transition t ipt)
+      PlaceSet.empty
 
 end;;
 
@@ -394,4 +413,62 @@ include IPT
       (leftclosed_causality_set x net)
     else 
       raise IllegalNet
+end;;
+
+module ReversibleCN = 
+struct
+
+include CN
+
+  let forward_transitions ipt = TransitionSet.forward_subset ipt.transitions 
+  let backward_transitions ipt = TransitionSet.backward_subset ipt.transitions
+
+  let forward_subnet_is_pCN ipt = 
+    let forward_flow = 
+      FlowSet.filter
+      (function {source = n1 ; target = n2} -> match (n1, n2) with 
+        | S(_) , T(F _ )
+        | T(F _ ), S(_) -> true 
+        | _ -> false
+      )
+      ipt.flow
+    in 
+
+    let forward_inhibitors = 
+      InhibitorSet.filter
+      (function {source = n1 ; target = n2} -> match (n1, n2) with 
+        | S(_) , T(F _ )
+        | _ -> false
+      )
+      ipt.inhibitors
+    in 
+
+    let subnet : IPT.t = 
+      {places = ipt.places; 
+       transitions = forward_transitions ipt;
+       flow = forward_flow;
+       inhibitors = forward_inhibitors;
+       marking = ipt.marking
+      }
+    in
+
+    is_pCN subnet
+  
+  let exaclty_one_reverse_transition ipt = 
+    let at_most_one_revesing_transition = 
+      let preset_of_others t ipt = 
+        preset_of_TransitionSet (TransitionSet.remove t ipt.transitions) ipt 
+      in 
+      
+      TransitionSet.for_all 
+      (fun t -> PlaceSet.is_empty (PlaceSet.inter (preset_of_transition t ipt) (preset_of_others t ipt)))
+      (backward_transitions ipt)
+    in
+
+
+    at_most_one_revesing_transition
+
+    (* Needs to finish this propriety*)
+
+
 end;;

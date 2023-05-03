@@ -1,9 +1,5 @@
 open Exceptions
 
-(* Here we define a type for the places S, we will consider the as integers preceeded with a label S.
-   In order to represent them as Sets, we define a module Place to give an order between places, 
-   after that, we can define the module PlaceSet using the already existing Set module*)
-
 type place = int;;     
 
 module Place = 
@@ -25,16 +21,26 @@ module PlaceSet =
     let print s = iter Place.print s ;;
 end;;
 
-(* Here, we do the same for transitions T: we define them as strings preceeded with a label T and create the relative modules*)
-type transition = string;;
+
+type transition = F of string | B of string ;;
 
 module Transition = 
 struct 
   type t = transition
 
-  let compare = String.compare
+  let compare = compare
 
-  let to_string s = s
+  let is_forward = function
+  | F _ -> true
+  | B _ -> false
+
+  let is_backward = function
+  | F _ -> false
+  | B _ -> true
+
+  let to_string t = match t with 
+  | F s -> s
+  | B s -> "!" ^ s
   
   let print t = print_endline (to_string t)
 end;; 
@@ -43,6 +49,24 @@ module TransitionSet =
 struct
   include Set.Make(Transition)
   
+  let forward_subset tt = 
+    filter 
+    (function F _ -> true | B _ -> false)
+    tt
+
+  let backward_subset tt = 
+    filter 
+    (function F _ -> false | B _ -> true)
+    tt
+  
+  let is_correct tt =
+    fold
+    (fun t b -> match t with
+      | F _ -> b
+      | B x -> (mem (F x) tt) && b)
+    tt
+    true
+
   let print s = iter Transition.print s
 
 end;;
@@ -68,10 +92,6 @@ end;;
 
 type arc = {source : node; target : node};;
 
-(* This represents the Flow relation, it can be seen as the union of Presets and Postsets of all transitions and places of the net, 
-   a step of the flow relation can consist in place -> transition or transition -> place*)
-
-(* Here we give an order to the flow relation, we put the palce -> transition type of steps before the transition -> place ones*)
 module Flow =
 struct
   type t = arc
@@ -98,7 +118,6 @@ struct
 
   let print s = iter Flow.print s
 end;;
-(* Here we define the set of inibitor arcs of a causal net such that InibArc(s, t) means that the place s inhibits the transition t *)
 
 module InhibArc =
 struct
