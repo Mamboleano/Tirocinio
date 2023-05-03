@@ -26,6 +26,9 @@ module IPT :
     val caused_by : Sets.transition -> Sets.transition -> t -> bool
     val in_conflict : Sets.transition -> Sets.transition -> t -> bool
   end
+
+
+  
 module Causality :
   sig
     type t = { cause : Sets.transition; effect : Sets.transition; }
@@ -35,6 +38,7 @@ module Causality :
     val to_string : t -> Sets.transition
     val print : t -> unit
   end
+
 module CausalityRelation :
   sig
     type elt = Causality.t
@@ -96,6 +100,9 @@ module CausalityRelation :
     val is_transitive : t -> bool
     val is_IPO : t -> bool
   end
+
+
+
 module Conflict :
   sig
     type t = { t1 : Sets.transition; t2 : Sets.transition; }
@@ -103,6 +110,7 @@ module Conflict :
     val to_string : t -> string
     val print : t -> unit
   end
+
 module ConflictRelation :
   sig
     type elt = Conflict.t
@@ -156,6 +164,9 @@ module ConflictRelation :
     val print : t -> unit
     val build : IPT.t -> t
   end
+
+
+
 module CN :
   sig
     type t =
@@ -190,6 +201,8 @@ module CN :
     (* Defined functions *)
     val causality_relation : IPT.t -> CausalityRelation.t
     val conflict_relation : IPT.t -> ConflictRelation.t
+    val conflict_free_set : Sets.TransitionSet.t -> IPT.t -> bool
+    val leftclosed_causality_set : Sets.TransitionSet.t -> IPT.t -> bool
     val non_flow_causality : t -> bool
     val no_backward_conflicts : t -> bool
     val no_or_causality : t -> bool
@@ -199,4 +212,5 @@ module CN :
     val is_pCN : IPT.t -> bool
     val is_conflict_inherited : IPT.t -> bool
     val is_CN : IPT.t -> bool
+    val is_configuration : Sets.TransitionSet.t -> IPT.t -> bool
   end

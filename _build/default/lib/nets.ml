@@ -292,6 +292,16 @@ include IPT
   (* Given an ipt, this function return its conflict relation *)
   let conflict_relation ipt = ConflictRelation.build ipt
 
+  let conflict_free_set x ipt = 
+    ConflictRelation.for_all 
+    (fun tt -> not ((TransitionSet.mem tt.t1 x) && (TransitionSet.mem tt.t2 x)))
+    (conflict_relation ipt)
+  
+  let leftclosed_causality_set x net = 
+    TransitionSet.for_all
+    (fun t -> TransitionSet.subset (CausalityRelation.causes_of t (causality_relation net)) x)
+    x
+
   (* This function returns true iff the flow relation of the ipt does not define causality,
       i.e. if all the places are not inputs and outputs of transitions *)
   let non_flow_causality ipt = 
@@ -338,14 +348,8 @@ include IPT
 
   (* This functions checks that the set made of the causes of some transition t is conflict-free *)
   let local_conflict_freeness ipt = 
-    let helper cs_t ipt = 
-      ConflictRelation.for_all 
-      (fun tt -> not ((TransitionSet.mem tt.t1 cs_t) && (TransitionSet.mem tt.t2 cs_t)))
-      (conflict_relation ipt)
-    in
-
     TransitionSet.for_all
-    (fun t -> helper (CausalityRelation.causes_of t (causality_relation ipt)) ipt)
+    (fun t -> conflict_free_set (CausalityRelation.causes_of t (causality_relation ipt)) ipt)
     ipt.transitions 
 
   (* This function checks that the initial marking of the ipt is a subset of the preset of all the transitions,
@@ -381,4 +385,13 @@ include IPT
      i.e. if the ipt is a pre-Causal Net and the Conflict Relation is inherited along the Causality Relation *)
   let is_CN ipt = 
     (is_pCN ipt) && (is_conflict_inherited ipt)
+
+  (* This function returns true iff the set of transitions x is a configuration for the net *)
+  let is_configuration x net = 
+    if is_pCN net then 
+      (TransitionSet.subset x net.transitions) &&
+      (conflict_free_set x net) && 
+      (leftclosed_causality_set x net)
+    else 
+      raise IllegalNet
 end;;

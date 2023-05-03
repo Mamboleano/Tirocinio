@@ -2,6 +2,10 @@ open Tirocinio.Sets
 open Tirocinio.Printing
 open Tirocinio.Nets
 
+(* All of this code will be added and refactored into the tests. 
+   c1 is the net depicted in figure 5(a) of the paper "A distributed
+   operational view of Reversible Prime Event Structures", while c2
+   is the one depicted in figure 5(b) *)
 
 let s = PlaceSet.of_list [1; 2; 3; 4; 5; 6; 7; 8; 9];;
 let t = TransitionSet.of_list ["a"; "b"; "c"; "d"]

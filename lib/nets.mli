@@ -201,6 +201,8 @@ module CN :
     (* Defined functions *)
     val causality_relation : IPT.t -> CausalityRelation.t
     val conflict_relation : IPT.t -> ConflictRelation.t
+    val conflict_free_set : Sets.TransitionSet.t -> IPT.t -> bool
+    val leftclosed_causality_set : Sets.TransitionSet.t -> IPT.t -> bool
     val non_flow_causality : t -> bool
     val no_backward_conflicts : t -> bool
     val no_or_causality : t -> bool
@@ -210,4 +212,5 @@ module CN :
     val is_pCN : IPT.t -> bool
     val is_conflict_inherited : IPT.t -> bool
     val is_CN : IPT.t -> bool
+    val is_configuration : Sets.TransitionSet.t -> IPT.t -> bool
   end
