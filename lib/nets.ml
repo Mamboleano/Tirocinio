@@ -132,15 +132,15 @@ struct
 
 
     (* returns true iff t <. t'*)
-    let caused_by t' t cn = 
-      let preset_t = preset_of_transition t cn in
-      let inhibitors_t' = inhibitors_of_transition t' cn in 
+    let caused_by t' t ipt = 
+      let preset_t = preset_of_transition t ipt in
+      let inhibitors_t' = inhibitors_of_transition t' ipt in 
       not (PlaceSet.is_empty (PlaceSet.inter preset_t inhibitors_t'))
-
+        
     (* returns true iff t #. t'*)
-    let in_conflict t t' cn = 
-      let preset_t = preset_of_transition t cn in
-      let preset_t' = preset_of_transition t' cn in
+    let in_conflict t t' ipt = 
+      let preset_t = preset_of_transition t ipt in
+      let preset_t' = preset_of_transition t' ipt in
       not (PlaceSet.is_empty (PlaceSet.inter preset_t preset_t'))
 
     let non_shared_inputs t ipt = 
@@ -423,6 +423,33 @@ include CN
   let forward_transitions ipt = TransitionSet.forward_subset ipt.transitions 
   let backward_transitions ipt = TransitionSet.backward_subset ipt.transitions
 
+  let sustainly_caused_by t' t ipt = 
+    let reverses_of_t = 
+      TransitionSet.fold
+      (fun x tt -> 
+        if (PlaceSet.equal (preset_of_transition x ipt) (postset_of_transition t ipt)) then 
+          TransitionSet.add x tt 
+        else
+          tt
+        )
+      (backward_transitions ipt)
+      TransitionSet.empty
+    in
+    
+    (caused_by t' t ipt)
+    &&
+    (TransitionSet.for_all 
+    (fun x -> PlaceSet.is_empty (PlaceSet.inter (inhibitors_of_transition x ipt) (postset_of_transition t' ipt)))
+    reverses_of_t)
+
+
+
+
+
+
+
+
+
   let forward_subnet_is_pCN ipt = 
     let forward_flow = 
       FlowSet.filter
@@ -457,18 +484,114 @@ include CN
   let exaclty_one_reverse_transition ipt = 
     let at_most_one_revesing_transition = 
       let preset_of_others t ipt = 
-        preset_of_TransitionSet (TransitionSet.remove t ipt.transitions) ipt 
+        preset_of_TransitionSet (TransitionSet.remove t (backward_transitions ipt)) ipt 
       in 
       
       TransitionSet.for_all 
       (fun t -> PlaceSet.is_empty (PlaceSet.inter (preset_of_transition t ipt) (preset_of_others t ipt)))
       (backward_transitions ipt)
     in
+    
+    let transitions_that_produce_input bt ipt = 
+      TransitionSet.fold
+      (fun ft tt -> 
+        if PlaceSet.equal (postset_of_transition ft ipt) (preset_of_transition bt ipt) then 
+          TransitionSet.add ft tt 
+        else
+          tt
+      )
+      (forward_transitions ipt)
+      TransitionSet.empty
+    in
+(*
+    let transitions_that_take_output bt ipt = 
+      TransitionSet.fold
+      (fun ft tt -> 
+        if PlaceSet.equal (preset_of_transition ft ipt) (postset_of_transition bt ipt) then 
+          TransitionSet.add ft tt 
+        else
+          tt
+      )
+      (forward_transitions ipt)
+      TransitionSet.empty
+    in
+
+    let transitions_that_cause_reversing bt ipt = 
+      TransitionSet.fold
+      (fun ft tt -> 
+        if not (PlaceSet.equal (PlaceSet.inter (non_shared_inputs ft ipt) (inhibitors_of_transition bt ipt)) (PlaceSet.empty)) then 
+          TransitionSet.add ft tt 
+        else
+          tt
+      )
+      (forward_transitions ipt)
+      TransitionSet.empty
+    in
+    *)
+    at_most_one_revesing_transition && 
+    (
+      TransitionSet.for_all 
+      (fun t -> 
+        (TransitionSet.equal (transitions_that_produce_input t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
+        (*&&
+        (TransitionSet.equal (transitions_that_take_output t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
+        &&
+        (TransitionSet.equal (transitions_that_cause_reversing t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
+        *)
+      )
+      (backward_transitions ipt)
+    )
 
 
-    at_most_one_revesing_transition
+    (*
+   let finite_causes_of_backward_transitions ipt = 
 
-    (* Needs to finish this propriety*)
+    This condition requires a set to be finite, hence it is satisfied since we cannot represent infitite sets
+    *)
 
+    let not_caused_and_prevented ipt = 
+      TransitionSet.for_all
+      (fun bt -> 
+        TransitionSet.for_all 
+        (fun ft -> 
+          if not (PlaceSet.equal 
+              (PlaceSet.inter (preset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
+              (PlaceSet.empty)
+            ) then 
+
+              (PlaceSet.equal 
+            (PlaceSet.inter (postset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
+            (PlaceSet.empty)
+              )
+          else 
+            true
+          )
+        (forward_transitions ipt))
+      (backward_transitions ipt)
+    
+
+    let is_conflict_inherited_along_sustained_causality ipt = 
+      TransitionSet.for_all 
+      (fun t -> 
+        TransitionSet.for_all 
+        (fun t' -> 
+          TransitionSet.for_all 
+          (fun t'' -> 
+            if (in_conflict t t' ipt) && (sustainly_caused_by t'' t' ipt) then 
+              in_conflict t t'' ipt
+            else 
+              true
+              )
+          (forward_transitions ipt)
+          )
+        (forward_transitions ipt)
+        )
+      (forward_transitions ipt)
+    
+    let is_rCN ipt = 
+      (forward_subnet_is_pCN ipt) &&
+      (exaclty_one_reverse_transition ipt) &&
+      (not_caused_and_prevented ipt) &&
+      (is_conflict_inherited_along_sustained_causality ipt)
 
 end;;

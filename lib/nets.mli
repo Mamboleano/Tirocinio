@@ -203,6 +203,7 @@ module CN :
     val fire_seq : Sets.TransitionSet.t -> t -> unit
     val caused_by : Sets.transition -> Sets.transition -> t -> bool
     val in_conflict : Sets.transition -> Sets.transition -> t -> bool
+    val non_shared_inputs : Sets.Transition.t -> t -> Sets.PlaceSet.t
 
     (* Defined functions *)
     val causality_relation : IPT.t -> CausalityRelation.t
@@ -252,6 +253,7 @@ module CN :
     val fire_seq : Sets.TransitionSet.t -> t -> unit
     val caused_by : Sets.transition -> Sets.transition -> t -> bool
     val in_conflict : Sets.transition -> Sets.transition -> t -> bool
+    val non_shared_inputs : Sets.Transition.t -> t -> Sets.PlaceSet.t
 
     (* Functions inherited from CN *)
     val causality_relation : IPT.t -> CausalityRelation.t
@@ -272,7 +274,10 @@ module CN :
     (* Defined functions *)
     val forward_transitions : IPT.t -> Sets.TransitionSet.t
     val backward_transitions : IPT.t -> Sets.TransitionSet.t
+    val sustainly_caused_by : Sets.transition -> Sets.transition -> IPT.t -> bool
     val forward_subnet_is_pCN : IPT.t -> bool
     val exaclty_one_reverse_transition : IPT.t -> bool
-
+    val not_caused_and_prevented : IPT.t -> bool
+    val is_conflict_inherited_along_sustained_causality : IPT.t -> bool
+    val is_rCN : IPT.t -> bool
   end

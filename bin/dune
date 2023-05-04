@@ -1,4 +1,4 @@
 (executable
  (public_name Tirocinio)
  (name main)
- (libraries Tirocinio))
+ (libraries Tirocinio examples))
