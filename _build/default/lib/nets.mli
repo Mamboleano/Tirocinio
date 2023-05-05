@@ -280,4 +280,5 @@ module CN :
     val not_caused_and_prevented : IPT.t -> bool
     val is_conflict_inherited_along_sustained_causality : IPT.t -> bool
     val is_rCN : IPT.t -> bool
+    val is_preConfiguration : Sets.TransitionSet.t -> IPT.t -> bool
   end

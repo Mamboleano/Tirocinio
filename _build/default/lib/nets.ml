@@ -503,7 +503,7 @@ include CN
       (forward_transitions ipt)
       TransitionSet.empty
     in
-(*
+
     let transitions_that_take_output bt ipt = 
       TransitionSet.fold
       (fun ft tt -> 
@@ -527,17 +527,18 @@ include CN
       (forward_transitions ipt)
       TransitionSet.empty
     in
-    *)
+
     at_most_one_revesing_transition && 
     (
       TransitionSet.for_all 
       (fun t -> 
-        (TransitionSet.equal (transitions_that_produce_input t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
-        (*&&
-        (TransitionSet.equal (transitions_that_take_output t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
-        &&
-        (TransitionSet.equal (transitions_that_cause_reversing t ipt) (TransitionSet.of_list [F(Transition.to_string t)]))
-        *)
+        TransitionSet.equal
+          (TransitionSet.inter 
+          (TransitionSet.inter (transitions_that_produce_input t ipt) (transitions_that_take_output t ipt))
+          (transitions_that_cause_reversing t ipt)
+          )
+
+          (TransitionSet.of_list [F(Transition.label t)])  
       )
       (backward_transitions ipt)
     )
@@ -593,5 +594,10 @@ include CN
       (exaclty_one_reverse_transition ipt) &&
       (not_caused_and_prevented ipt) &&
       (is_conflict_inherited_along_sustained_causality ipt)
+
+    let is_preConfiguration x rCN = 
+      TransitionSet.subset x (forward_transitions rCN)
+      &&
+      conflict_free_set x rCN
 
 end;;

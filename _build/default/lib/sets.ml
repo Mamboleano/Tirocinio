@@ -38,6 +38,10 @@ struct
   | F _ -> false
   | B _ -> true
 
+  let label = function
+  | F s
+  | B s -> s
+
   let to_string t = match t with 
   | F s -> s
   | B s -> "!" ^ s

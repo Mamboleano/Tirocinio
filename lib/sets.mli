@@ -71,6 +71,7 @@ module Transition :
     val compare : 'a -> 'a -> int
     val is_forward : t -> bool
     val is_backward : t -> bool
+    val label : t -> string
     val to_string : transition -> string
     val print : transition -> unit
   end
