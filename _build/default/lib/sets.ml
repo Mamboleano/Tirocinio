@@ -1,27 +1,5 @@
 open Exceptions
 
-type place = int;;     
-
-module Place = 
-struct 
-  type t = place
-  let compare = Int.compare
-
-  let to_string = function
-  | n -> "s" ^ (string_of_int n)
-
-  let print s = print_endline (to_string s);;
-end;; 
-
-
-module PlaceSet = 
-  struct
-    include Set.Make(Place)
-
-    let print s = iter Place.print s ;;
-end;;
-
-
 type transition = F of string | B of string ;;
 
 module Transition = 
@@ -73,6 +51,35 @@ struct
 
   let print s = iter Transition.print s
 
+end;;
+
+
+type place = 
+  | I of int 
+  | PrePlace of transition
+  | PostPlace of transition 
+  | ConfPlace of transition * transition;;     
+
+module Place = 
+struct 
+  type t = place
+  let compare = compare
+
+  let to_string = function
+  | I n -> "s" ^ (string_of_int n)
+  | PrePlace t -> "(* , " ^ (Transition.to_string t) ^ ")"
+  | PostPlace t -> "(" ^ (Transition.to_string t) ^ " , *)"
+  | ConfPlace (t, t') -> "({" ^ (Transition.to_string t) ^ ", " ^ (Transition.to_string t') ^ "}, #)"
+
+  let print s = print_endline (to_string s);;
+end;; 
+
+
+module PlaceSet = 
+  struct
+    include Set.Make(Place)
+
+    let print s = iter Place.print s ;;
 end;;
 
 

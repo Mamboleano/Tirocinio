@@ -1,0 +1,1 @@
+lib/converters.ml: CN CausalityRelation ConflictRelation Exceptions FlowSet IPT InhibitorSet Nets Pes PlaceSet PrePES PreventionRelation Relations ReverseCausalityRelation ReversibleCN ReversiblePES Sets Transition TransitionSet

@@ -8,3 +8,15 @@ module Net2 = Examples__Net2
 
 (** @canonical Examples.Net3 *)
 module Net3 = Examples__Net3
+
+(** @canonical Examples.Pes1 *)
+module Pes1 = Examples__Pes1
+
+(** @canonical Examples.Pes2 *)
+module Pes2 = Examples__Pes2
+
+(** @canonical Examples.Pes3 *)
+module Pes3 = Examples__Pes3
+
+(** @canonical Examples.Pes4 *)
+module Pes4 = Examples__Pes4

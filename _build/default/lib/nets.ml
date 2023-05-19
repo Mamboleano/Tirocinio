@@ -1,5 +1,6 @@
-open Sets
-open Exceptions
+open Sets;;
+open Exceptions;;
+open Relations;;
 
 module IPT = 
 struct
@@ -157,38 +158,20 @@ struct
 
 end;;
 
-module Causality = 
+
+module CN = 
 struct
-  type t = {cause : transition ; effect : transition}
-  let compare = compare
+  
+include IPT 
 
-  (* Given the tuple t <. t', returns t *)
-  let cause_of {cause = x; effect = _} = x
-
-  (* Given the tuple t <. t', returns t' *)
-  let effect_of {cause = _; effect = x} = x
-
-  let to_string {cause = t; effect = t'} = (Transition.to_string t) ^ " < " ^ (Transition.to_string t')
-  let print x = print_endline (to_string x)
-
-end;;
-
-module CausalityRelation = 
-struct
-
-  include Set.Make(Causality)
-
-  let print s = iter Causality.print s
-
-  (* Given an ipt, this function returns the set representing the Causality Relation of that ipt *)
-  let build ipt =
-
+  (* Given an ipt, this function return its causal relation *)
+  let causality_relation ipt = 
     (* This auxilary function builds a set of Causality tuples in which t is always the effect *)
     let helper t tt = 
       TransitionSet.fold 
-      (fun x cc -> add {cause = x; effect = t} cc)
+      (fun x cc -> CausalityRelation.add {cause = x; effect = t} cc)
       tt
-      empty
+      CausalityRelation.empty
     in
 
     (* This auxilary function returns a set of transitions that represents the causes of the transition t *)
@@ -200,116 +183,26 @@ struct
     in
     
     TransitionSet.fold 
-    (fun x cc -> union (helper x (helper_causes_of x ipt)) cc)
+    (fun x cc -> CausalityRelation.union (helper x (helper_causes_of x ipt)) cc)
     ipt.transitions
-    empty
-  
-  (* This function returns the set of transitions that are all the causes of the transition t
-
-     side note: more efficient than the helper function defined above,
-      because this uses the tuples of the Causality Relation alredy built *)
-  let causes_of t cr = fold
-    (fun c tt -> if (Causality.effect_of c) = t then TransitionSet.add (Causality.cause_of c) tt else tt)
-    cr
-    TransitionSet.empty
-
-  (* This function returns the set of transitions that are all the effects of the transition t *)
-  let effects_of t cr = fold
-  (fun c tt -> if (Causality.cause_of c) = t then TransitionSet.add (Causality.effect_of c) tt else tt)
-  cr
-  TransitionSet.empty
-  
-  (* This function returns the set of transitions that are the cause of some transition t *)
-  let causes cr = fold 
-    (fun x tt-> TransitionSet.add (Causality.cause_of x) tt)
-    cr 
-    TransitionSet.empty
-  (* This function returns the set of transitions that are the effect of some transition t *)
-  let effects cr = fold 
-    (fun x tt-> TransitionSet.add (Causality.effect_of x) tt)
-    cr 
-    TransitionSet.empty
-  
-  (* This function checks if the causality relation is irreflecive, i.e. not(a <. a) *)
-  let is_irreflexive cr = TransitionSet.fold
-    (fun x b -> not (mem {cause = x ; effect = x} cr) && b)
-    (causes cr)
-    true
-  
-  (* This function checks if the causality relation is asymmetric, i.e. if a <. b and b <. a then a = b *)
-  let is_asymmetric cr = fold
-    (fun {cause = c; effect = e} b -> not(mem {cause = e; effect = c} cr) && b)
-    cr
-    true
-
-
-  (* This function checks if the causality relation is transitive, i.e. if a <. b and b <.c then a <. c *)
-  let is_transitive cr = 
-    let helper bb cr = TransitionSet.fold 
-      (fun b cc -> TransitionSet.union (causes_of b cr) cc)
-      bb
-      TransitionSet.empty
-    in
-
-    TransitionSet.fold
-    (fun a b -> (TransitionSet.subset (helper (causes_of a cr) cr) (causes_of a cr)) && b)
-    (causes cr)
-    true
-
-  (* This function check if the causality relation is an Irreflexive Partial Order,
-      i.e. if it is irreflexive, asymmetric and transitive *)
-  let is_IPO cr = (is_irreflexive cr) && (is_asymmetric cr) && (is_transitive cr)
-  
-end;;
-
-
-module Conflict = 
-struct
-  type t = {t1 : transition ; t2 : transition}  
-  let compare = compare 
-
-  let to_string tt = Transition.to_string tt.t1 ^ " # " ^ Transition.to_string tt.t2
-
-  let print x = print_endline (to_string x)
-
-end;;
-
-module ConflictRelation = 
-struct
-  include Set.Make(Conflict) 
-  let print s = iter Conflict.print s
-
-   (* Given an ipt, this function returns the set representing the Conflict Relation of that ipt  *)
-  let build ipt = 
-
-    (* Given a transition t, this helper function returns the Conflict Relation made of the couples (t1,t2),
-        where t1 = t and t2 is some transition in conflict with t *)
-    let helper t ipt = 
-      TransitionSet.fold
-      (fun x cc -> if IPT.in_conflict t x ipt then add {t1 = t ; t2 = x} cc else cc)
-      (TransitionSet.remove t ipt.transitions)
-      empty
-
-    in
-
-    TransitionSet.fold
-    (fun x cc -> union (helper x ipt) cc)
-    ipt.transitions
-    empty
-
-end;;
-
-
-module CN = 
-struct
-  
-include IPT 
-
-  (* Given an ipt, this function return its causal relation *)
-  let causality_relation ipt = CausalityRelation.build ipt
+    CausalityRelation.empty
 
   (* Given an ipt, this function return its conflict relation *)
-  let conflict_relation ipt = ConflictRelation.build ipt
+  let conflict_relation ipt = 
+    (* Given a transition t, this helper function returns the Conflict Relation made of the couples (t1,t2),
+      where t1 = t and t2 is some transition in conflict with t *)
+      let helper t ipt = 
+        TransitionSet.fold
+        (fun x cc -> if IPT.in_conflict t x ipt then ConflictRelation.add {t1 = t ; t2 = x} cc else cc)
+        (TransitionSet.remove t ipt.transitions)
+        ConflictRelation.empty
+  
+      in
+  
+      TransitionSet.fold
+      (fun x cc -> ConflictRelation.union (helper x ipt) cc)
+      ipt.transitions
+      ConflictRelation.empty
 
   let conflict_free_set x ipt = 
     ConflictRelation.for_all 

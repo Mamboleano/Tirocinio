@@ -1,1 +1,1 @@
-lib/nets.ml: Exceptions Flow FlowSet InhibitorSet PlaceSet Set Sets Transition TransitionSet
+lib/nets.ml: CausalityRelation ConflictRelation Exceptions Flow FlowSet InhibitorSet PlaceSet Relations Sets Transition TransitionSet

@@ -1,1 +1,1 @@
-lib/nets.mli: Seq Set Sets
+lib/nets.mli: Relations Sets

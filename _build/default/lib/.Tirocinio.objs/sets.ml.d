@@ -1,1 +1,1 @@
-lib/sets.ml: Exceptions Int Set
+lib/sets.ml: Exceptions Set
