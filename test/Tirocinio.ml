@@ -22,6 +22,8 @@ assert(not (PrePES.is_PES p1));;
 assert(PrePES.is_pPES p2);;
 assert(PrePES.is_PES p2);;
 
+assert(ReversiblePES.is_rPES p4);;
+
 assert(
   List.for_all 
     (fun c -> PrePES.is_enabled_at c (TransitionSet.empty) p1)
@@ -78,8 +80,6 @@ let conv_p3 = to_rCN p3;;
 assert(ReversibleCN.is_rCN conv_p3);;
 
 let conv_p4 = to_rCN p4;;
-(* ReversibleCN.print conv_p4;; *)
 assert(ReversibleCN.is_rCN conv_p4);;
-
 
 print_endline "passed all tests";;

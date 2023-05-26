@@ -49,4 +49,5 @@ module ReversiblePES:
     val is_enabled_at : Sets.TransitionSet.t -> Sets.TransitionSet.t -> Sets.TransitionSet.t -> t -> bool
     val fire_set : Sets.TransitionSet.t -> Sets.TransitionSet.t -> t -> unit
     val fire_seq : (Sets.TransitionSet.t * Sets.TransitionSet.t) list -> t -> unit
+    val is_cause_respecting : t -> bool
   end

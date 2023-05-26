@@ -362,4 +362,7 @@ struct
       a,b -> fire_set a b p)
     seq
 
+  let is_cause_respecting p = 
+    CausalityRelation.equal (sustained_causation p) p.causality
+
 end;;

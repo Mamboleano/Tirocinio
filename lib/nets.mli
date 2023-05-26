@@ -135,6 +135,8 @@ module CN :
     (* Defined functions *)
     val forward_transitions : IPT.t -> Sets.TransitionSet.t
     val backward_transitions : IPT.t -> Sets.TransitionSet.t
+    val sustained_causation : t -> Relations.CausalityRelation.t
+    val reverses_of : Sets.transition -> t -> Sets.TransitionSet.t
     val sustainly_caused_by : Sets.transition -> Sets.transition -> IPT.t -> bool
     val forward_subnet_is_pCN : IPT.t -> bool
     val exaclty_one_reverse_transition : IPT.t -> bool

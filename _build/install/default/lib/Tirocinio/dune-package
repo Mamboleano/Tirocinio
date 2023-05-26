@@ -1,4 +1,0 @@
-(lang dune 3.6)
-(name Tirocinio)
-(sections (lib .) (bin ../../bin) (doc ../../doc/Tirocinio))
-(files (lib (META dune-package opam)) (bin (Tirocinio.exe)) (doc (README.md)))

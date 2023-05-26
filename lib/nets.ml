@@ -316,9 +316,8 @@ include CN
   let forward_transitions ipt = TransitionSet.forward_subset ipt.transitions 
   let backward_transitions ipt = TransitionSet.backward_subset ipt.transitions
 
-  let sustainly_caused_by t' t ipt = 
-    let reverses_of_t = 
-      TransitionSet.fold
+  let reverses_of t ipt = 
+    TransitionSet.fold
       (fun x tt -> 
         if (PlaceSet.equal (preset_of_transition x ipt) (postset_of_transition t ipt)) then 
           TransitionSet.add x tt 
@@ -326,21 +325,29 @@ include CN
           tt
         )
       (backward_transitions ipt)
-      TransitionSet.empty
-    in
-    
-    (caused_by t' t ipt)
-    &&
-    (TransitionSet.for_all 
-    (fun x -> PlaceSet.is_empty (PlaceSet.inter (inhibitors_of_transition x ipt) (postset_of_transition t' ipt)))
-    reverses_of_t)
+      (TransitionSet.empty)
+
+  
+  let sustained_causation ipt = 
+    CausalityRelation.fold
+    (fun {cause = t ; effect = t'} sc -> 
+      if ((Transition.is_forward t) && (Transition.is_forward t')) then
+        if (not(TransitionSet.equal (reverses_of t ipt) (TransitionSet.empty))) then 
+          if PlaceSet.is_empty (PlaceSet.inter (postset_of_transition t' ipt) (inhibitors_of_transition (B(Transition.label t)) ipt)) then 
+            sc 
+          else 
+            CausalityRelation.add {cause = t ; effect = t'} sc
+        else
+          CausalityRelation.add {cause = t ; effect = t'} sc
+      else 
+        sc
+    )
+    (causality_relation ipt)
+    (CausalityRelation.empty)
 
 
-
-
-
-
-
+  let sustainly_caused_by t' t ipt = 
+    CausalityRelation.mem {cause = t ; effect = t'} (sustained_causation ipt)
 
 
   let forward_subnet_is_pCN ipt = 
@@ -476,10 +483,10 @@ include CN
             else 
               true
               )
-          (forward_transitions ipt)
+          (TransitionSet.diff (forward_transitions ipt) (TransitionSet.of_list [t ; t']))
           )
-        (forward_transitions ipt)
-        )
+        (TransitionSet.diff (forward_transitions ipt) (TransitionSet.singleton t))
+      )
       (forward_transitions ipt)
     
     let is_rCN ipt = 
