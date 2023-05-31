@@ -1,6 +1,7 @@
 open Relations;;
 open Sets;;
 open Exceptions;;
+open Reachability;;
 
 
 (* We will model events like transitions *)
@@ -364,5 +365,83 @@ struct
 
   let is_cause_respecting p = 
     CausalityRelation.equal (sustained_causation p) p.causality
+
+  (* In this case is much easier, we simply take out all the causality tuples that are not
+     tuples of the sustained causation, so we just set < to <<< *)
+  let to_causally_respecting_pes p =
+
+    {
+      events = p.events;
+      undoable_events = p.undoable_events;
+      causality = (sustained_causation p);
+      conflict = p.conflict;
+      rev_causality = p.rev_causality;
+      prevention = p.prevention;
+      current_configuration = p.current_configuration;
+    }
+  
+  let is_reachable_conf_CR x p = 
+    (* We only consider CR rPES for now, so if a rPES is CR, then the configuration can be
+       reduced to one made only by forward events *)
+    if (is_cause_respecting p) then 
+      let new_x = 
+        TransitionSet.fold
+        (fun t xx -> match t with 
+          | B s -> TransitionSet.diff xx (TransitionSet.of_list [B s ; F s])
+          | _ -> xx)
+        (x)
+        (x)
+      in
+
+      (* Here we first check that the configuration is conflict free, otherwise,
+         it would not be reachable *)
+      if (PrePES.conflict_free_set x (associated_pPES p)) then 
+      
+        let rec helper conf enabler conf_seq = 
+          let enabled_events = 
+              TransitionSet.fold
+            (fun t tt -> 
+              if (is_enabled_at (TransitionSet.singleton t) (TransitionSet.empty) enabler p) then
+                (TransitionSet.add t tt)
+
+              else
+                tt
+            )
+            (conf)
+            (TransitionSet.empty)
+          in
+
+          if (TransitionSet.is_empty enabled_events) then
+            (conf, conf_seq)
+          
+          else 
+              let new_enabler = TransitionSet.union enabler enabled_events in 
+              let new_conf = TransitionSet.diff conf enabled_events in 
+              let new_conf_seq = conf_seq @ [enabled_events] in 
+
+              (* Checking if the sequence as a whole is enabled *)
+              if (is_enabled_at enabled_events (TransitionSet.empty) enabler p) then 
+                helper new_conf new_enabler new_conf_seq 
+
+              else 
+                raise SequenceNotEnabled
+
+        in
+
+        let (remaining_events, firing_seq) = helper new_x (TransitionSet.empty) [] in 
+
+        if (TransitionSet.is_empty remaining_events) then 
+          Reachable firing_seq
+
+        else 
+          Not_Reachable
+
+
+      else
+        Not_Reachable
+
+
+    else
+      raise NonCauseRespecting;;
 
 end;;
