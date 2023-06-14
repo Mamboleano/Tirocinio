@@ -12,6 +12,9 @@ module Net3 = Examples__Net3
 (** @canonical Examples.Net4 *)
 module Net4 = Examples__Net4
 
+(** @canonical Examples.Net5 *)
+module Net5 = Examples__Net5
+
 (** @canonical Examples.Pes1 *)
 module Pes1 = Examples__Pes1
 

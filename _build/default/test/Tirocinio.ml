@@ -7,6 +7,7 @@ open Examples.Net1;;
 open Examples.Net2;;
 open Examples.Net3;;
 open Examples.Net4;;
+open Examples.Net5;;
 open Examples.Pes1;;
 open Examples.Pes2;;
 open Examples.Pes3;;
@@ -85,5 +86,11 @@ assert(ReversibleCN.is_cause_respecting c3);;
 
 assert(not(ReversibleCN.is_cause_respecting c4));;
 assert(ReversibleCN.is_cause_respecting (ReversibleCN.to_causally_respecting_net c4));;
+
+assert(ReversibleCN.is_rCN c5);;
+assert(not(ReversibleCN.is_cause_respecting c5));;
+(* TransitionSet.print (ReversibleCN.causal_bothering_set c5);; *)
+ReversiblePES.print (to_rPES c5);;
+
 
 print_endline "passed all tests";;

@@ -3,7 +3,7 @@
 # Shared cache: disabled
 # Workspace root: "C:\\Users\\ohrel\\OCAMLProj\\Tirocinio"
 # Auto-detected concurrency: 12
-$ C:\Users\ohrel\AppData\Local\Programs\DISKUV~1\usr\bin\ocamlc.opt.exe -config > C:\Users\ohrel\AppData\Local\Temp\dune_e5d8e3_output
+$ C:\Users\ohrel\AppData\Local\Programs\DISKUV~1\usr\bin\ocamlc.opt.exe -config > C:\Users\ohrel\AppData\Local\Temp\dune_f31be0_output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"
@@ -136,4 +136,28 @@ $ C:\Users\ohrel\AppData\Local\Programs\DISKUV~1\usr\bin\ocamlc.opt.exe -config 
 #      }
 #  }
 $ (cd _build/default/test && ./Tirocinio.exe)
+>
+> Events:
+> a
+> b
+> c
+>
+> Undoable Events:
+> b
+> c
+>
+> Conflict:
+> a # b
+> b # a
+>
+> Causality:
+> b < c
+>
+> Reverse Causality:
+> b ≺ !b
+> c ≺ !c
+>
+> Prevention:
+>
+> Current configuration:
 > passed all tests

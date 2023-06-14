@@ -37,6 +37,12 @@ struct
     (TransitionSet.subset (ConflictRelation.t1s cf) ev) &&
     (TransitionSet.subset (ConflictRelation.t2s cf) ev) 
 
+
+  let ipo_causality p = CausalityRelation.is_IPO (p.causality)
+
+  let irreflexive_and_symmetric_conflict p = 
+    (ConflictRelation.is_irreflexive p.conflict) && (ConflictRelation.is_symmetric p.conflict)
+
   let conflict_free_causality {events = ev; causality = cr; conflict = cf; current_configuration = _} = 
     TransitionSet.for_all 
     (fun e -> 
@@ -62,6 +68,8 @@ struct
   
   let is_pPES sys = 
     (correct_sets sys) &&
+    (ipo_causality sys) && 
+    (irreflexive_and_symmetric_conflict sys) &&
     (conflict_free_causality sys)
   
   let is_PES sys = 
@@ -97,53 +105,53 @@ struct
       a
     )
 
-    let fire_set a p =
-      if is_enabled_at a p.current_configuration p then 
-        p.current_configuration <- TransitionSet.union p.current_configuration a
-      else 
-        raise IllegalFireSet
-    
-    let fire_seq seq p = 
-      List.iter
-      (fun s -> fire_set s p)
-      seq
+  let fire_set a p =
+    if is_enabled_at a p.current_configuration p then 
+      p.current_configuration <- TransitionSet.union p.current_configuration a
+    else 
+      raise IllegalFireSet
+  
+  let fire_seq seq p = 
+    List.iter
+    (fun s -> fire_set s p)
+    seq
 
 
-    let hc p =
-      let closed_conflict = 
-        ConflictRelation.fold 
-        (fun {t1 = e ; t2 = e'} cf -> 
-          TransitionSet.fold 
-          (fun e'' cf'' -> 
-            if not (ConflictRelation.mem {t1 = e; t2 = e''} cf'') then 
-              ConflictRelation.add {t1 = e; t2 = e''} cf''
-            else 
-              cf''
-            )
-          (CausalityRelation.effects_of e' p.causality)
-          (cf))
-        (p.conflict)
-        (p.conflict)
-      in 
-
-      let symmetric_conflict = 
-        ConflictRelation.fold 
-        (fun {t1 = e' ; t2 = e} cf -> 
-          if not (ConflictRelation.mem {t1 = e ; t2 = e'} cf) then 
-            ConflictRelation.add {t1 = e ; t2 = e'} cf
+  let hc p =
+    let closed_conflict = 
+      ConflictRelation.fold 
+      (fun {t1 = e ; t2 = e'} cf -> 
+        TransitionSet.fold 
+        (fun e'' cf'' -> 
+          if not (ConflictRelation.mem {t1 = e; t2 = e''} cf'') then 
+            ConflictRelation.add {t1 = e; t2 = e''} cf''
           else 
-            cf
+            cf''
           )
-        (closed_conflict)
-        (closed_conflict)
-      in
+        (CausalityRelation.effects_of e' p.causality)
+        (cf))
+      (p.conflict)
+      (p.conflict)
+    in 
 
-      {
-       events = p.events;
-       causality = p.causality;
-       conflict = symmetric_conflict;
-       current_configuration = p.current_configuration;
-      }
+    let symmetric_conflict = 
+      ConflictRelation.fold 
+      (fun {t1 = e' ; t2 = e} cf -> 
+        if not (ConflictRelation.mem {t1 = e ; t2 = e'} cf) then 
+          ConflictRelation.add {t1 = e ; t2 = e'} cf
+        else 
+          cf
+        )
+      (closed_conflict)
+      (closed_conflict)
+    in
+
+    {
+      events = p.events;
+      causality = p.causality;
+      conflict = symmetric_conflict;
+      current_configuration = p.current_configuration;
+    }
 
 end;;
 
@@ -395,7 +403,7 @@ struct
 
       (* Here we first check that the configuration is conflict free, otherwise,
          it would not be reachable *)
-      if (PrePES.conflict_free_set x (associated_pPES p)) then 
+      if (PrePES.conflict_free_set new_x (associated_pPES p)) then 
       
         let rec helper conf enabler conf_seq = 
           let enabled_events = 
@@ -426,7 +434,6 @@ struct
               else 
                 raise SequenceNotEnabled
 
-
         in
 
         let (remaining_events, firing_seq) = helper new_x (TransitionSet.empty) [] in 
@@ -444,5 +451,31 @@ struct
 
     else
       raise NonCauseRespecting;;
+
+(*
+  let is_reachable_conf x p = 
+    if (is_cause_respecting p) then 
+      is_reachable_conf_CR x p 
+
+    else
+      let cb = 
+        CausalityRelation.fold 
+        (fun {cause = t ; effect = t'} cb' -> 
+          TransitionSet.add t cb'
+        )
+        (CausalityRelation.diff (p.causality) (sustained_causation p))
+        (TransitionSet.empty)
+      in
+
+      if (PrePES.conflict_free_set new_x (associated_pPES p)) then
+        
+
+
+
+
+      else
+        Not_Reachable
+
+*)
 
 end;;

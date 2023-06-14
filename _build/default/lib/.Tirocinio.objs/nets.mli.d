@@ -1,1 +1,1 @@
-lib/nets.mli: Relations Sets
+lib/nets.mli: Reachability Relations Sets

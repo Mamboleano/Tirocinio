@@ -1,6 +1,7 @@
 open Sets;;
 open Exceptions;;
 open Relations;;
+open Reachability;;
 
 module IPT = 
 struct
@@ -460,146 +461,220 @@ include CN
     This condition requires a set to be finite, hence it is satisfied since we cannot represent infitite sets
     *)
 
-    let not_caused_and_prevented ipt = 
-      TransitionSet.for_all
-      (fun bt -> 
-        TransitionSet.for_all 
-        (fun ft -> 
-          if not (PlaceSet.equal 
-              (PlaceSet.inter (preset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
-              (PlaceSet.empty)
-            ) then 
-
-              (PlaceSet.equal 
-            (PlaceSet.inter (postset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
+  let not_caused_and_prevented ipt = 
+    TransitionSet.for_all
+    (fun bt -> 
+      TransitionSet.for_all 
+      (fun ft -> 
+        if not (PlaceSet.equal 
+            (PlaceSet.inter (preset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
             (PlaceSet.empty)
-              )
+          ) then 
+
+            (PlaceSet.equal 
+          (PlaceSet.inter (postset_of_transition ft ipt) (inhibitors_of_transition bt ipt))
+          (PlaceSet.empty)
+            )
+        else 
+          true
+        )
+      (forward_transitions ipt))
+    (backward_transitions ipt)
+  
+
+  let is_conflict_inherited_along_sustained_causality ipt = 
+    TransitionSet.for_all 
+    (fun t -> 
+      TransitionSet.for_all 
+      (fun t' -> 
+        TransitionSet.for_all 
+        (fun t'' -> 
+          if (in_conflict t t' ipt) && (sustainly_caused_by t'' t' ipt) then 
+            in_conflict t t'' ipt
           else 
             true
-          )
-        (forward_transitions ipt))
-      (backward_transitions ipt)
-    
-
-    let is_conflict_inherited_along_sustained_causality ipt = 
-      TransitionSet.for_all 
-      (fun t -> 
-        TransitionSet.for_all 
-        (fun t' -> 
-          TransitionSet.for_all 
-          (fun t'' -> 
-            if (in_conflict t t' ipt) && (sustainly_caused_by t'' t' ipt) then 
-              in_conflict t t'' ipt
-            else 
-              true
-              )
-          (TransitionSet.diff (forward_transitions ipt) (TransitionSet.of_list [t ; t']))
-          )
-        (TransitionSet.diff (forward_transitions ipt) (TransitionSet.singleton t))
-      )
-      (forward_transitions ipt)
-    
-    let is_rCN ipt = 
-      (forward_subnet_is_pCN ipt) &&
-      (exaclty_one_reverse_transition ipt) &&
-      (not_caused_and_prevented ipt) &&
-      (is_conflict_inherited_along_sustained_causality ipt)
-
-    let is_preConfiguration x rCN = 
-      TransitionSet.subset x (forward_transitions rCN)
-      &&
-      conflict_free_set x rCN
-
-    (* This set contains only reversable transition ,so we iterate on the backwards 
-    transitions to reduce the complexity *)
-    let causal_bothering_set rCN = 
-      TransitionSet.fold
-      (fun u cb -> 
-        let t = F (Transition.label u) 
-        in 
-
-        let helper = 
-          TransitionSet.fold
-          (fun t' cb' -> 
-            if ((caused_by t' t rCN) && not(is_prevented_by u t' rCN)) then 
-              TransitionSet.add t cb'
-            else 
-              cb'
             )
-          (TransitionSet.diff (forward_transitions rCN) (TransitionSet.singleton t))
-          (TransitionSet.empty)
-        in
-
-        TransitionSet.union cb (helper)
+        (TransitionSet.diff (forward_transitions ipt) (TransitionSet.of_list [t ; t']))
         )
-      (backward_transitions rCN)
-      (TransitionSet.empty)
+      (TransitionSet.diff (forward_transitions ipt) (TransitionSet.singleton t))
+    )
+    (forward_transitions ipt)
+  
+  let is_rCN ipt = 
+    (forward_subnet_is_pCN ipt) &&
+    (exaclty_one_reverse_transition ipt) &&
+    (not_caused_and_prevented ipt) &&
+    (is_conflict_inherited_along_sustained_causality ipt)
 
+  let is_preConfiguration x rCN = 
+    TransitionSet.subset x (forward_transitions rCN)
+    &&
+    conflict_free_set x rCN
 
+  (* Given a set of transitions a, this function returns true iff a is enabled at the current marking of the ipt *)
+  let is_enabled_at a m ipt =
+    let preset_a = preset_of_TransitionSet a ipt in
+    let postset_a = postset_of_TransitionSet a ipt in
+    let inhibset_a = inhibitors_of_TransitionSet a ipt in 
+  
+    (PlaceSet.subset preset_a m)
+    &&
+    (PlaceSet.for_all 
+    (fun x ->  not (PlaceSet.mem x m) && not (PlaceSet.mem x postset_a))
+     inhibset_a
+    )
+    
 
-    (* We say that a rCN is causally-respecting iff < == <<< , as a consequence, 
-       it also must be that CB(rCN) == 0 *)
-    let is_cause_respecting rCN = 
+  (* This set contains only reversable transition ,so we iterate on the backwards 
+  transitions to reduce the complexity *)
+  let causal_bothering_set rCN = 
+    TransitionSet.fold
+    (fun u cb -> 
+      let t = F (Transition.label u) 
+      in 
 
-      (* Since <<< is defined only on forward transitions, we filter the backward ones
-         from the causality relation *)
-      let filtered_causality_relation = 
-        CausalityRelation.filter 
-        (fun {cause = t ; effect = t'} -> 
-          (Transition.is_forward t) && (Transition.is_forward t')
-        )
-        (CN.causality_relation rCN)
+      let helper = 
+        TransitionSet.fold
+        (fun t' cb' -> 
+          if ((caused_by t' t rCN) && not(is_prevented_by u t' rCN)) then 
+            TransitionSet.add t cb'
+          else 
+            cb'
+          )
+        (TransitionSet.diff (forward_transitions rCN) (TransitionSet.singleton t))
+        (TransitionSet.empty)
       in
 
-      CausalityRelation.equal (filtered_causality_relation) (sustained_causation rCN)
-      &&
-      TransitionSet.is_empty (causal_bothering_set rCN)
+      TransitionSet.union cb (helper)
+      )
+    (backward_transitions rCN)
+    (TransitionSet.empty)
 
-    
 
-    let to_causally_respecting_net rCN = 
-      let helper = 
-        InhibitorSet.fold 
-        (fun a ii -> match a with 
-          | {source = S(s) ; target = T(t)} when (Transition.is_forward t) -> 
-              if(TransitionSet.is_empty 
-                  (TransitionSet.inter (postset_of_place s rCN) (causal_bothering_set rCN))
-                )then 
-                ii 
 
-              else 
-                InhibitorSet.add {source = S(s) ; target = T(t)} ii
+  (* We say that a rCN is causally-respecting iff < == <<< , as a consequence, 
+      it also must be that CB(rCN) == 0 *)
+  let is_cause_respecting rCN = 
 
-          (* We don't want to remove inhibitor arcs that define causality, so 
-             if t is backwards we do not want to consider its forward transition *)
-          | {source = S(s) ; target = T(t)} when (Transition.is_backward t) -> 
+    (* Since <<< is defined only on forward transitions, we filter the backward ones
+        from the causality relation *)
+    let filtered_causality_relation = 
+      CausalityRelation.filter 
+      (fun {cause = t ; effect = t'} -> 
+        (Transition.is_forward t) && (Transition.is_forward t')
+      )
+      (CN.causality_relation rCN)
+    in
+
+    CausalityRelation.equal (filtered_causality_relation) (sustained_causation rCN)
+    &&
+    TransitionSet.is_empty (causal_bothering_set rCN)
+
+  
+
+  let to_causally_respecting_net rCN = 
+    let helper = 
+      InhibitorSet.fold 
+      (fun a ii -> match a with 
+        | {source = S(s) ; target = T(t)} when (Transition.is_forward t) -> 
             if(TransitionSet.is_empty 
-                (TransitionSet.inter 
-                  (TransitionSet.diff (postset_of_place s rCN) (TransitionSet.singleton (F (Transition.label t))))
-                  (causal_bothering_set rCN))
+                (TransitionSet.inter (postset_of_place s rCN) (causal_bothering_set rCN))
               )then 
               ii 
 
             else 
               InhibitorSet.add {source = S(s) ; target = T(t)} ii
 
-          | _ -> ii
-        )
-        (rCN.inhibitors)
-        (InhibitorSet.empty)
+        (* We don't want to remove inhibitor arcs that define causality, so 
+            if t is backwards we do not want to consider its forward transition *)
+        | {source = S(s) ; target = T(t)} when (Transition.is_backward t) ->
+            InhibitorSet.add {source = S(s) ; target = T(t)} ii
+
+        | _ -> ii
+      )
+      (rCN.inhibitors)
+      (InhibitorSet.empty)
+    in
+
+    let i' = 
+      InhibitorSet.diff (rCN.inhibitors) helper 
+    in
+
+    {
+      places = rCN.places;
+      transitions = rCN.transitions;
+      flow = rCN.flow;
+      inhibitors = i';
+      marking = rCN.marking;
+    }
+  
+  let is_reachable_conf_CR x v = 
+    (* We only consider CR rCN for now, so if a rCN is CR, then the configuration can be
+        reduced to one made only by forward transitions *)
+    if (is_cause_respecting v) then 
+      let new_x = 
+        TransitionSet.fold
+        (fun t xx -> match t with 
+          | B s -> TransitionSet.diff xx (TransitionSet.of_list [B s ; F s])
+          | _ -> xx)
+        (x)
+        (x)
       in
 
-      let i' = 
-        InhibitorSet.diff (rCN.inhibitors) helper 
-      in
+      (* Here we first check that the configuration is conflict free, otherwise,
+          it would not be reachable *)
+      if (conflict_free_set new_x v) then 
+      
+        let rec helper conf enabler conf_seq = 
+          let enabled_transitions = 
+              TransitionSet.fold
+            (fun t tt -> 
+              if (is_enabled_at (TransitionSet.singleton t) enabler v) then
+                (TransitionSet.add t tt)
 
-      {
-        places = rCN.places;
-        transitions = rCN.transitions;
-        flow = rCN.flow;
-        inhibitors = i';
-        marking = rCN.marking;
-      }
+              else
+                tt
+            )
+            (conf)
+            (TransitionSet.empty)
+          in
+
+          if (TransitionSet.is_empty enabled_transitions) then
+            (conf, conf_seq)
+          
+          else 
+              let new_enabler = 
+                PlaceSet.union 
+                  (postset_of_TransitionSet enabled_transitions v)
+                  (PlaceSet.diff enabler (preset_of_TransitionSet enabled_transitions v))
+                in 
+              let new_conf = TransitionSet.diff conf enabled_transitions in 
+              let new_conf_seq = conf_seq @ [enabled_transitions] in 
+
+              (* Checking if the sequence as a whole is enabled *)
+              if (is_enabled_at enabled_transitions enabler v) then 
+                helper new_conf new_enabler new_conf_seq 
+
+              else 
+                raise SequenceNotEnabled
+
+        in
+
+        let (remaining_events, firing_seq) = helper new_x (v.marking) [] in 
+
+        if (TransitionSet.is_empty remaining_events) then 
+          Reachable firing_seq
+
+        else 
+          Not_Reachable
+
+
+      else
+        Not_Reachable
+
+
+    else
+      raise NonCauseRespecting;;
 
 
 end;;

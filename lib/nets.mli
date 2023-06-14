@@ -145,8 +145,9 @@ module CN :
     val is_conflict_inherited_along_sustained_causality : IPT.t -> bool
     val is_rCN : IPT.t -> bool
     val is_preConfiguration : Sets.TransitionSet.t -> IPT.t -> bool
+    val is_enabled_at : Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> bool
     val causal_bothering_set : t -> Sets.TransitionSet.t
     val is_cause_respecting : t -> bool
     val to_causally_respecting_net : t -> t
-    
+    val is_reachable_conf_CR : Sets.TransitionSet.t -> t -> Reachability.reachable_flag
   end

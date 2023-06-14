@@ -10,6 +10,8 @@ module PrePES :
     val print : t -> unit
     val reset_conf : t -> unit
     val correct_sets : t -> bool
+    val ipo_causality : t -> bool
+    val irreflexive_and_symmetric_conflict : t -> bool
     val conflict_free_causality : t -> bool
     val is_conflict_inherited : t -> bool
     val is_pPES : t -> bool
