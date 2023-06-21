@@ -38,6 +38,12 @@ struct
   (fun c tt -> if (Causality.cause_of c) = t then TransitionSet.add (Causality.effect_of c) tt else tt)
   cr
   TransitionSet.empty
+
+  let causes_of_TransitionSet ts cr = 
+    TransitionSet.fold 
+    (fun t tt -> TransitionSet.union (causes_of t cr) tt)
+    ts
+    (TransitionSet.empty)
   
   (* This function returns the set of transitions that are the cause of some transition t *)
   let causes cr = fold 

@@ -61,6 +61,7 @@ module CausalityRelation :
     val print : t -> unit
     val causes_of : Sets.transition -> t -> Sets.TransitionSet.t
     val effects_of : Sets.transition -> t -> Sets.TransitionSet.t
+    val causes_of_TransitionSet : Sets.TransitionSet.t -> t -> Sets.TransitionSet.t
     val causes : t -> Sets.TransitionSet.t
     val effects : t -> Sets.TransitionSet.t
     val is_irreflexive : t -> bool

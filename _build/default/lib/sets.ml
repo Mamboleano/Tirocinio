@@ -49,7 +49,26 @@ struct
     tt
     true
 
-  let print s = iter Transition.print s
+
+  let list_to_string t_list = 
+    let rec builder list s = match list with 
+      | [] -> s 
+      | t::l -> builder l (String.concat "," [s; (Transition.to_string t)]) 
+    in
+
+    builder t_list ""
+
+  let list_of_sets_to_string s_list = 
+    let rec builder list str = match list with 
+      | [] -> str
+      | s::l -> builder l (String.concat " list: " [str ; (list_to_string (elements s))]) 
+    in
+
+    builder s_list ""
+
+  let print s = 
+    print_endline("TransitionSet:");
+    iter Transition.print s
 
 end;;
 

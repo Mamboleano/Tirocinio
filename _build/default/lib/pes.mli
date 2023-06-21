@@ -54,4 +54,11 @@ module ReversiblePES:
     val is_cause_respecting : t -> bool
     val to_causally_respecting_pes : t -> t
     val is_reachable_conf_CR : Sets.TransitionSet.t -> t -> Reachability.reachable_flag
+    val order_transition_sets_with_causality : Sets.TransitionSet.t -> Relations.CausalityRelation.t -> Sets.TransitionSet.t list
+    val order_transitions_with_causality : Sets.TransitionSet.t -> Relations.CausalityRelation.t -> Sets.transition list
+    val order_backward_transition_sets_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.TransitionSet.t list 
+    val order_transitions_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.transition list
+
+    
+    val is_reachable_conf : Sets.TransitionSet.t -> t -> Sets.transition list
   end

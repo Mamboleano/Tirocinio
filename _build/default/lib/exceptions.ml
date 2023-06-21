@@ -9,3 +9,4 @@ exception IllegalFireSet;;
 exception IllegalPlace;;
 exception NonCauseRespecting;;
 exception SequenceNotEnabled;;
+exception NotReachable of string

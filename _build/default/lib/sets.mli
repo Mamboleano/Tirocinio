@@ -65,6 +65,8 @@ module TransitionSet :
     val forward_subset : t -> t
     val backward_subset : t -> t
     val is_correct : t -> bool
+    val list_to_string : transition list -> string
+    val list_of_sets_to_string : t list -> string
     val print : t -> unit
   end
 
