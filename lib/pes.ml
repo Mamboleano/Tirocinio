@@ -549,7 +549,7 @@ struct
 
     in
 
-    helper ts (TransitionSet.empty) prevention []
+    helper ts ts prevention []
 
 
   let order_transitions_with_prevention ts pr = 
