@@ -569,6 +569,7 @@ struct
 
     if not ((TransitionSet.subset x p.events) &&
       (is_rPES p) &&
+      (PrePES.conflict_free_set x (associated_pPES p)) &&
       (ReverseCausalityRelation.is_causal_reversibility p.rev_causality)
     ) then 
       raise FailedRequirements 
