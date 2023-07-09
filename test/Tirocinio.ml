@@ -12,6 +12,7 @@ open Examples.Pes1;;
 open Examples.Pes2;;
 open Examples.Pes3;;
 open Examples.Pes4;;
+open Examples.Pes5;;
 open Tirocinio.Converters;;
 
 assert(CN.is_pCN c1);;
@@ -95,12 +96,22 @@ assert(not(ReversibleCN.is_cause_respecting c5));;
 
 (*
 CausalityRelation.print (ReversiblePES.sustained_causation p3);;
-let prova_list = ReversiblePES.oreder_transition_sets_with_causality (p3.events) (ReversiblePES.sustained_causation p3);;
+let prova_list = ReversiblePES.order_transition_sets_with_causality (p3.events) (ReversiblePES.sustained_causation p3);;
 List.iter (TransitionSet.print) prova_list;;
 *)
 
-let prova_seq_list = ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"])) p4;;
-List.iter (Transition.print) prova_seq_list;;
+
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"c"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"; F"d"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"d"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"a"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"b"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"a"; F"a"])) p5;;
+ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"; F"c"])) p5;;
 
 
 print_endline "passed all tests";;

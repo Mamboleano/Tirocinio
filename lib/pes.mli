@@ -58,7 +58,5 @@ module ReversiblePES:
     val order_transitions_with_causality : Sets.TransitionSet.t -> Relations.CausalityRelation.t -> Sets.transition list
     val order_backward_transition_sets_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.TransitionSet.t list 
     val order_transitions_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.transition list
-
-    
     val is_reachable_conf : Sets.TransitionSet.t -> t -> Sets.transition list
   end

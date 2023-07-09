@@ -389,8 +389,16 @@ struct
     }
   
   let is_reachable_conf_CR x p = 
+
     (* We only consider CR rPES for now, so if a rPES is CR, then the configuration can be
-       reduced to one made only by forward events *)
+       reduced to one made only of forward events *)
+    if not ((TransitionSet.subset x p.events) &&
+      (is_rPES p) &&
+      (is_cause_respecting p)
+    ) then 
+      raise FailedRequirements 
+    else
+
     if (is_cause_respecting p) then 
       let new_x = 
         TransitionSet.fold
@@ -556,17 +564,52 @@ struct
 
     
 
+  
   let is_reachable_conf x p = 
+
+    if not ((TransitionSet.subset x p.events) &&
+      (is_rPES p) &&
+      (ReverseCausalityRelation.is_causal_reversibility p.rev_causality)
+    ) then 
+      raise FailedRequirements 
+    else
 
 
     let rec find_target ts ts_list = 
       match ts_list with 
         | [] -> raise (NotReachable "Did not find target")
-        | t::l -> if (PrePES.conflict_free_set 
+        | t::l -> 
+          let rev_events = 
+            TransitionSet.fold 
+            (fun t' tt -> 
+              if (TransitionSet.mem t' p.undoable_events) then 
+                TransitionSet.add (B(Transition.label t')) tt
+              else
+                tt
+              )
+            (CausalityRelation.causes_of_TransitionSet (TransitionSet.diff ts (TransitionSet.singleton t)) p.causality)
+            (TransitionSet.empty)
+          in
+
+          (*
+          print_endline (String.concat " " [
+        "Rev events : " ; 
+        (TransitionSet.list_to_string (TransitionSet.elements rev_events)) ; 
+        "current transition : " ; 
+        (Transition.to_string t);
+        "preventing set : ";
+        (TransitionSet.list_to_string (TransitionSet.elements (PreventionRelation.preventing_of_rev_set rev_events p.prevention)))
+        
+      ]);*)
+          
+          if ((PrePES.conflict_free_set 
                       (TransitionSet.union 
                         (TransitionSet.singleton t)
                         (CausalityRelation.causes_of_TransitionSet (TransitionSet.diff ts (TransitionSet.singleton t)) p.causality))
                         (associated_pPES p))
+                        &&
+                        (not (TransitionSet.mem t (PreventionRelation.preventing_of_rev_set rev_events p.prevention)))
+                      )
                   then 
                     t 
 
@@ -602,6 +645,10 @@ struct
 
     let rec handle_sub_x executed_transitions remaining_transitions aux_Y seq_list sub_x = 
 
+      (* 
+      DEBUG PRINTS
+      
+
       print_endline (String.concat " " [
         "Chiamata handle_sub_x : executed_transitions : " ; 
         (TransitionSet.list_to_string (TransitionSet.elements executed_transitions)) ; 
@@ -610,6 +657,9 @@ struct
         "aux_Y : " ; 
         (TransitionSet.list_to_string (TransitionSet.elements aux_Y)) ;
       ]);
+      *)
+
+      
 
       if((TransitionSet.equal remaining_transitions (TransitionSet.empty)) && (TransitionSet.equal executed_transitions sub_x)) then 
         (aux_Y , seq_list)
@@ -643,6 +693,9 @@ struct
           (* This is the list ordered to reverse the causes of target, since they are not part of the final configuration we need to clean them *)
           let reverse_cause_target_list = order_transitions_with_prevention (reverse_cause_target cause_target_list TransitionSet.empty) p.prevention in
 
+          (* 
+          DEBUG PRINTS
+
           print_endline (String.concat " " [
           "causes_of_target : " ; 
           (TransitionSet.list_to_string cause_target_list) ;
@@ -651,6 +704,7 @@ struct
           "aux_Y' : " ; 
         (TransitionSet.list_to_string (TransitionSet.elements aux_Y')) ;
         ]);
+        *)
           
           (* At this point the aux_Y should contain only the target in addition to before *)
           let (aux_Y'' , seq_list'') = remove_causes_target reverse_cause_target_list aux_Y' seq_list' in

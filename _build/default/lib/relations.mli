@@ -205,6 +205,7 @@ module ReverseCausalityRelation :
     val rev_effects_of : Sets.transition -> t -> Sets.TransitionSet.t
     val causes : t -> Sets.TransitionSet.t
     val rev_effects : t -> Sets.TransitionSet.t
+    val is_causal_reversibility : t -> bool
 
   end
 
@@ -277,6 +278,7 @@ module PreventionRelation :
     val is_correct : t -> bool
     val preventing_of_rev : Sets.transition -> t -> Sets.TransitionSet.t
     val prevented_of : Sets.transition -> t -> Sets.TransitionSet.t
+    val preventing_of_rev_set : Sets.TransitionSet.t -> t -> Sets.TransitionSet.t
     val preventing_ts : t -> Sets.TransitionSet.t
     val prevented_ts : t -> Sets.TransitionSet.t
 

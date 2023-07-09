@@ -7,6 +7,7 @@ exception IllegalTransition;;
 exception IllegalPrevention;;
 exception IllegalFireSet;;
 exception IllegalPlace;;
+exception FailedRequirements;;
 exception NonCauseRespecting;;
 exception SequenceNotEnabled;;
 exception NotReachable of string

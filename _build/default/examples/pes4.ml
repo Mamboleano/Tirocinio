@@ -21,7 +21,9 @@ let rev_cr = ReverseCausalityRelation.of_list [
   {cause = F "d"; rev = B "c"};
 ];;
 
-let prev = PreventionRelation.of_list [];;
+let prev = PreventionRelation.of_list [
+  {preventing = F"d"; prevented = B"b"}
+];;
 
 let p4 : ReversiblePES.t = 
   {events = e ;

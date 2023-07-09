@@ -199,6 +199,18 @@ struct
     rc
     TransitionSet.empty
 
+  let is_causal_reversibility rc = 
+    fold 
+    (fun {cause = t ; rev = t'} tt ->
+      if (t = (F(Transition.label t'))) then 
+        tt 
+    else
+      false && tt
+        
+    )
+    rc 
+    (true)
+
 end;;
 
 
@@ -259,6 +271,13 @@ struct
         pr
       TransitionSet.empty
     else raise IllegalTransition 
+  
+    let preventing_of_rev_set s pr = 
+      TransitionSet.fold 
+      (fun t tt -> 
+          TransitionSet.union (preventing_of_rev t pr) tt)
+      (s)
+      (TransitionSet.empty)
   
   let preventing_ts pr = 
     fold

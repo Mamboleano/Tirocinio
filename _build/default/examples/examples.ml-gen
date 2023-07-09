@@ -26,3 +26,6 @@ module Pes3 = Examples__Pes3
 
 (** @canonical Examples.Pes4 *)
 module Pes4 = Examples__Pes4
+
+(** @canonical Examples.Pes5 *)
+module Pes5 = Examples__Pes5
