@@ -703,9 +703,9 @@ struct
           "reverse_causes_of_target : " ; 
           (TransitionSet.list_to_string reverse_cause_target_list) ;
           "aux_Y' : " ; 
-        (TransitionSet.list_to_string (TransitionSet.elements aux_Y')) ;
-        ]);
-        *)
+          (TransitionSet.list_to_string (TransitionSet.elements aux_Y')) ;
+          ]);
+          *)
           
           (* At this point the aux_Y should contain only the target in addition to before *)
           let (aux_Y'' , seq_list'') = remove_causes_target reverse_cause_target_list aux_Y' seq_list' in
@@ -730,27 +730,22 @@ struct
     in
 
 
-    if(PrePES.conflict_free_set x (associated_pPES p)) then 
+    let sub_x_list = order_transition_sets_with_causality x (sustained_causation p) in
+    let (final_y , final_seq_list) = handle_sub_x_list sub_x_list (TransitionSet.empty) [] in 
 
-      let sub_x_list = order_transition_sets_with_causality x (sustained_causation p) in
-      let (final_y , final_seq_list) = handle_sub_x_list sub_x_list (TransitionSet.empty) [] in 
-
-      if(TransitionSet.equal final_y x) then 
-        final_seq_list
-
-      else
-        raise (NotReachable (String.concat " " ["final y is not requested configuration, y: ";
-                             (TransitionSet.list_to_string (TransitionSet.elements final_y)) ;
-                             " final_seq: " ; 
-                             (TransitionSet.list_to_string final_seq_list);
-                             " requested x: ";
-                             (TransitionSet.list_to_string (TransitionSet.elements x)) ; 
-                             " sub_x_list : " ; 
-                             (TransitionSet.list_of_sets_to_string sub_x_list)]))
-
-
+    if(TransitionSet.equal final_y x) then 
+      final_seq_list
 
     else
-      raise (NotReachable "given configuration is not conflict free")
+      raise (NotReachable (String.concat " " ["final y is not requested configuration, y: ";
+                            (TransitionSet.list_to_string (TransitionSet.elements final_y)) ;
+                            " final_seq: " ; 
+                            (TransitionSet.list_to_string final_seq_list);
+                            " requested x: ";
+                            (TransitionSet.list_to_string (TransitionSet.elements x)) ; 
+                            " sub_x_list : " ; 
+                            (TransitionSet.list_of_sets_to_string sub_x_list)]))
+
+
 
 end;;
