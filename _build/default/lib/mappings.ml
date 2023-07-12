@@ -5,7 +5,7 @@ open Pes;;
 open Exceptions;;
 
 
-let to_pPES (net : CN.t) : PrePES.t = 
+let to_pPES (net : CN.t) : PES.t = 
   let new_conf = 
     ConflictRelation.filter
     (fun {t1 = t ; t2 = t'} -> not (t = t'))
@@ -112,7 +112,7 @@ let to_rPES (net : ReversibleCN.t) : ReversiblePES.t =
     current_configuration = TransitionSet.empty;
   }
 
-let to_pCN (p : PrePES.t) : CN.t = 
+let to_pCN (p : PES.t) : CN.t = 
   let s = 
     let pre_post_places = 
       TransitionSet.fold 

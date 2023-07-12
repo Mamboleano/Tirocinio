@@ -67,7 +67,6 @@ struct
     builder s_list ""
 
   let print s = 
-    print_endline("TransitionSet:");
     iter Transition.print s
 
 end;;

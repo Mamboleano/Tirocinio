@@ -13,7 +13,7 @@ let cr = CausalityRelation.of_list [
   {cause = F "b" ; effect = F "c"};
 ];;
 
-let p1 : PrePES.t = {events = e ; conflict = cf; causality = cr ; current_configuration = TransitionSet.empty};;
+let p1 : PES.t = {events = e ; conflict = cf; causality = cr ; current_configuration = TransitionSet.empty};;
 
 let confs_enabled = [
   TransitionSet.singleton (F("a"));

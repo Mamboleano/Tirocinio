@@ -15,4 +15,4 @@ let cr = CausalityRelation.of_list [
   {cause = F "b" ; effect = F "c"};
 ];;
 
-let p2 : PrePES.t = {events = e ; conflict = cf; causality = cr ; current_configuration = TransitionSet.empty};;
+let p2 : PES.t = {events = e ; conflict = cf; causality = cr ; current_configuration = TransitionSet.empty};;

@@ -1,1 +1,1 @@
-lib/pes.mli: Reachability Relations Sets
+lib/pes.mli: Relations Sets

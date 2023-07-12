@@ -511,18 +511,34 @@ include CN
     &&
     conflict_free_set x rCN
 
-  (* Given a set of transitions a, this function returns true iff a is enabled at the current marking of the ipt *)
-  let is_enabled_at a m ipt =
-    let preset_a = preset_of_TransitionSet a ipt in
-    let postset_a = postset_of_TransitionSet a ipt in
-    let inhibset_a = inhibitors_of_TransitionSet a ipt in 
+  (* Given a set of forward transitions a and a set of backwards transitions b, this function returns true iff (a U b) is enabled at the current marking of the ipt *)
+  let is_enabled_at a b m ipt =
+    let preset_ab = preset_of_TransitionSet (TransitionSet.union a b) ipt in
+    let postset_ab = postset_of_TransitionSet (TransitionSet.union a b) ipt in
+    let inhibset_ab = inhibitors_of_TransitionSet (TransitionSet.union a b) ipt in 
   
-    (PlaceSet.subset preset_a m)
+    (PlaceSet.subset preset_ab m)
     &&
     (PlaceSet.for_all 
-    (fun x ->  not (PlaceSet.mem x m) && not (PlaceSet.mem x postset_a))
-     inhibset_a
+    (fun x ->  not (PlaceSet.mem x m) && not (PlaceSet.mem x postset_ab))
+     inhibset_ab
     )
+
+  let fire_seq a b m ipt = 
+    if (is_enabled_at a b m ipt) then 
+      let new_m = PlaceSet.union 
+                  (PlaceSet.diff 
+                    (PlaceSet.union 
+                      (PlaceSet.diff m (preset_of_TransitionSet a ipt))
+                      (postset_of_TransitionSet a ipt)) 
+                    (preset_of_TransitionSet b ipt)) 
+                  (postset_of_TransitionSet b ipt)
+      in
+
+      new_m
+
+    else
+      raise SequenceNotEnabled
     
 
   (* This set contains only reversable transition ,so we iterate on the backwards 
@@ -629,7 +645,7 @@ include CN
           let enabled_transitions = 
               TransitionSet.fold
             (fun t tt -> 
-              if (is_enabled_at (TransitionSet.singleton t) enabler v) then
+              if (is_enabled_at (TransitionSet.singleton t) (TransitionSet.empty) enabler v) then
                 (TransitionSet.add t tt)
 
               else
@@ -652,7 +668,7 @@ include CN
               let new_conf_seq = conf_seq @ [enabled_transitions] in 
 
               (* Checking if the sequence as a whole is enabled *)
-              if (is_enabled_at enabled_transitions enabler v) then 
+              if (is_enabled_at enabled_transitions (TransitionSet.empty) enabler v) then 
                 helper new_conf new_enabler new_conf_seq 
 
               else 

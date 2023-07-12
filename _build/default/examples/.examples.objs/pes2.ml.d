@@ -1,1 +1,1 @@
-examples/pes2.ml: CausalityRelation ConflictRelation PrePES Tirocinio TransitionSet
+examples/pes2.ml: CausalityRelation ConflictRelation PES Tirocinio TransitionSet

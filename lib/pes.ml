@@ -1,12 +1,11 @@
 open Relations;;
 open Sets;;
 open Exceptions;;
-open Reachability;;
 
 
 (* We will model events like transitions *)
 
-module PrePES = 
+module PES = 
 struct
   type t = {
     events : TransitionSet.t;
@@ -25,8 +24,13 @@ struct
     print_endline "\nCausality:";
     CausalityRelation.print p.causality; 
 
-    print_endline "\nCurrent configuration:";
-    TransitionSet.print p.current_configuration
+    print_endline "\nCurrent configuration: ";
+
+    if (TransitionSet.equal (p.current_configuration) (TransitionSet.empty)) then 
+      print_endline "empty"
+    else
+      TransitionSet.print p.current_configuration
+  
 
   let reset_conf p =
     p.current_configuration <- TransitionSet.empty
@@ -187,7 +191,10 @@ struct
     PreventionRelation.print p.prevention;
 
     print_endline "\nCurrent configuration:";
-    TransitionSet.print p.current_configuration
+    if (TransitionSet.equal (p.current_configuration) (TransitionSet.empty)) then 
+      print_endline "empty"
+    else
+      TransitionSet.print p.current_configuration
 
 
   let reset_conf p =
@@ -207,7 +214,7 @@ struct
     (CausalityRelation.empty)
     
   
-  let associated_pPES (p : t) : PrePES.t = {events = p.events ; causality = p.causality ; conflict = p.conflict ; current_configuration = p.current_configuration}
+  let associated_pPES (p : t) : PES.t = {events = p.events ; causality = p.causality ; conflict = p.conflict ; current_configuration = p.current_configuration}
 
   let rev_events p = 
     TransitionSet.fold 
@@ -217,7 +224,7 @@ struct
 
   
   let correct_pes p = 
-    PrePES.is_pPES (associated_pPES p)
+    PES.is_pPES (associated_pPES p)
   
 
   let correct_U p =
@@ -235,7 +242,7 @@ struct
     )
     &&
     (TransitionSet.for_all
-      (fun u -> PrePES.conflict_free_set 
+      (fun u -> PES.conflict_free_set 
         (ReverseCausalityRelation.causes_of_rev 
           (B (Transition.label u)) p.rev_causality) 
         (associated_pPES p))
@@ -299,7 +306,7 @@ struct
     let preconditions = 
       (is_rPES p) &&
       (TransitionSet.subset x p.events) && 
-      (PrePES.conflict_free_set x (associated_pPES p)) &&
+      (PES.conflict_free_set x (associated_pPES p)) &&
       (TransitionSet.subset a p.events) &&
       (TransitionSet.subset f_b p.undoable_events)
 
@@ -308,7 +315,7 @@ struct
     let cond_one = 
       (TransitionSet.equal (TransitionSet.inter a x) TransitionSet.empty) &&
       (TransitionSet.subset f_b x) &&
-      (PrePES.conflict_free_set (TransitionSet.union x a) (associated_pPES p))
+      (PES.conflict_free_set (TransitionSet.union x a) (associated_pPES p))
     in
 
     let cond_two = 
@@ -350,7 +357,7 @@ struct
     cond_three &&
     cond_four
 
-  let fire_set a b p =
+  let exec_set a b p =
     let f_b = 
       TransitionSet.fold
       (fun t tt-> match t with 
@@ -365,10 +372,10 @@ struct
     else 
       raise IllegalFireSet
 
-  let fire_seq seq p = 
+  let exec_seq seq p = 
     List.iter
     (fun s -> match s with 
-      a,b -> fire_set a b p)
+      a,b -> exec_set a b p)
     seq
 
   let is_cause_respecting p = 
@@ -411,7 +418,7 @@ struct
 
       (* Here we first check that the configuration is conflict free, otherwise,
          it would not be reachable *)
-      if (PrePES.conflict_free_set new_x (associated_pPES p)) then 
+      if (PES.conflict_free_set new_x (associated_pPES p)) then 
       
         let rec helper conf enabler conf_seq = 
           let enabled_events = 
@@ -444,17 +451,17 @@ struct
 
         in
 
-        let (remaining_events, firing_seq) = helper new_x (TransitionSet.empty) [] in 
+        let (remaining_events, exec_seq) = helper new_x (TransitionSet.empty) [] in 
 
         if (TransitionSet.is_empty remaining_events) then 
-          Reachable firing_seq
+          exec_seq
 
         else 
-          Not_Reachable
+          raise (NotReachable "Couldn't execute all remaining events")
 
 
       else
-        Not_Reachable
+        raise (NotReachable "Configuration Target is not conflict free")
 
 
     else
@@ -569,7 +576,7 @@ struct
 
     if not ((TransitionSet.subset x p.events) &&
       (is_rPES p) &&
-      (PrePES.conflict_free_set x (associated_pPES p)) &&
+      (PES.conflict_free_set x (associated_pPES p)) &&
       (ReverseCausalityRelation.is_causal_reversibility p.rev_causality)
     ) then 
       raise FailedRequirements 
@@ -603,7 +610,7 @@ struct
         
       ]);*)
           
-          if ((PrePES.conflict_free_set 
+          if ((PES.conflict_free_set 
                       (TransitionSet.union 
                         (TransitionSet.singleton t)
                         (CausalityRelation.causes_of_TransitionSet (TransitionSet.diff ts (TransitionSet.singleton t)) p.causality))
@@ -681,7 +688,7 @@ struct
         in
 
         (* The causality closure of target must be conflict free, otherwise we cannot reach the configuration *)
-        if(PrePES.conflict_free_set (CausalityRelation.causes_of target p.causality) (associated_pPES p)) then 
+        if(PES.conflict_free_set (CausalityRelation.causes_of target p.causality) (associated_pPES p)) then 
           
           (* We then update the enabler and the firing sequence after the causes of target, and target itself, have been fired *)
           let (aux_Y' , seq_list') = 

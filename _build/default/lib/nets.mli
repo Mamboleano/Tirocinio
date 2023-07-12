@@ -111,7 +111,6 @@ module CN :
     val inhibitors_of_TransitionSet :
       Sets.TransitionSet.t -> t -> Sets.PlaceSet.t
     val is_enabled : Sets.TransitionSet.t -> t -> bool
-    val fire_seq : Sets.TransitionSet.t -> t -> unit
     val caused_by : Sets.transition -> Sets.transition -> t -> bool
     val in_conflict : Sets.transition -> Sets.transition -> t -> bool
     val non_shared_inputs : Sets.Transition.t -> t -> Sets.PlaceSet.t
@@ -145,7 +144,8 @@ module CN :
     val is_conflict_inherited_along_sustained_causality : IPT.t -> bool
     val is_rCN : IPT.t -> bool
     val is_preConfiguration : Sets.TransitionSet.t -> IPT.t -> bool
-    val is_enabled_at : Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> bool
+    val is_enabled_at : Sets.TransitionSet.t -> Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> bool
+    val fire_seq : Sets.TransitionSet.t -> Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> Sets.PlaceSet.t
     val causal_bothering_set : t -> Sets.TransitionSet.t
     val is_cause_respecting : t -> bool
     val to_causally_respecting_net : t -> t
