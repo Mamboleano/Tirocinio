@@ -5,13 +5,16 @@ module IPT :
       mutable transitions : Sets.TransitionSet.t;
       mutable flow : Sets.FlowSet.t;
       mutable inhibitors : Sets.InhibitorSet.t;
-      mutable marking : Sets.PlaceSet.t;
+      mutable initial_marking : Sets.PlaceSet.t;
+      mutable current_marking : Sets.PlaceSet.t;
     }
 
     val build : 
     Sets.PlaceSet.t -> Sets.TransitionSet.t ->
        Sets.FlowSet.t -> Sets.InhibitorSet.t ->
         Sets.PlaceSet.t -> t -> unit
+    
+    val reset_marking : t -> unit
     val valid_arc : Sets.arc -> t -> bool
     val valid_flow : t -> bool
     val print : t -> unit
@@ -42,10 +45,12 @@ module CN :
       mutable transitions : Sets.TransitionSet.t;
       mutable flow : Sets.FlowSet.t;
       mutable inhibitors : Sets.InhibitorSet.t;
-      mutable marking : Sets.PlaceSet.t;
+      mutable initial_marking : Sets.PlaceSet.t;
+      mutable current_marking : Sets.PlaceSet.t;
     }
 
     (* Function inherited from IPT *)
+    val reset_marking : t -> unit
     val valid_arc : Sets.arc -> t -> bool
     val valid_flow : t -> bool
     val print : t -> unit
@@ -92,10 +97,12 @@ module CN :
       mutable transitions : Sets.TransitionSet.t;
       mutable flow : Sets.FlowSet.t;
       mutable inhibitors : Sets.InhibitorSet.t;
-      mutable marking : Sets.PlaceSet.t;
+      mutable initial_marking : Sets.PlaceSet.t;
+      mutable current_marking : Sets.PlaceSet.t;
     }
 
     (* Function inherited from IPT *)
+    val reset_marking : t -> unit
     val valid_arc : Sets.arc -> t -> bool
     val valid_flow : t -> bool
     val print : t -> unit
@@ -135,6 +142,8 @@ module CN :
     val forward_transitions : IPT.t -> Sets.TransitionSet.t
     val backward_transitions : IPT.t -> Sets.TransitionSet.t
     val is_prevented_by : Sets.transition -> Sets.transition -> t -> bool
+    val reverse_causality_relation : t -> Relations.ReverseCausalityRelation.t
+    val prevention_relation : t -> Relations.PreventionRelation.t
     val sustained_causation : t -> Relations.CausalityRelation.t
     val reverses_of : Sets.transition -> t -> Sets.TransitionSet.t
     val sustainly_caused_by : Sets.transition -> Sets.transition -> IPT.t -> bool
@@ -145,9 +154,15 @@ module CN :
     val is_rCN : IPT.t -> bool
     val is_preConfiguration : Sets.TransitionSet.t -> IPT.t -> bool
     val is_enabled_at : Sets.TransitionSet.t -> Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> bool
-    val fire_seq : Sets.TransitionSet.t -> Sets.TransitionSet.t -> Sets.PlaceSet.t -> t -> Sets.PlaceSet.t
+    val fire_set : Sets.TransitionSet.t -> Sets.TransitionSet.t -> t -> unit
+    val fire_seq : (Sets.TransitionSet.t * Sets.TransitionSet.t) list -> t -> unit
     val causal_bothering_set : t -> Sets.TransitionSet.t
     val is_cause_respecting : t -> bool
     val to_causally_respecting_net : t -> t
-    val is_reachable_conf_CR : Sets.TransitionSet.t -> t -> Reachability.reachable_flag
+    val is_reachable_conf_CR : Sets.TransitionSet.t -> t -> Sets.TransitionSet.t list
+    val order_transition_sets_with_causality : Sets.TransitionSet.t -> Relations.CausalityRelation.t -> Sets.TransitionSet.t list
+    val order_transitions_with_causality : Sets.TransitionSet.t -> Relations.CausalityRelation.t -> Sets.transition list
+    val order_backward_transition_sets_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.TransitionSet.t list 
+    val order_transitions_with_prevention : Sets.TransitionSet.t -> Relations.PreventionRelation.t -> Sets.transition list
+    val is_reachable_conf : Sets.TransitionSet.t -> t -> Sets.transition list
   end

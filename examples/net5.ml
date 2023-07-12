@@ -34,4 +34,4 @@ let i = InhibitorSet.of_list [
 
 let m = PlaceSet.of_list [I(1); I(2); I(3); I(4)];;
 
-let c5 : IPT.t = {places = s; transitions = t; flow = f; inhibitors = i; marking = m};;
+let c5 : IPT.t = {places = s; transitions = t; flow = f; inhibitors = i; initial_marking = m; current_marking = m};;

@@ -1,1 +1,1 @@
-lib/nets.ml: CausalityRelation ConflictRelation Exceptions Flow FlowSet InhibitorSet PlaceSet Reachability Relations Sets Transition TransitionSet
+lib/nets.ml: CausalityRelation ConflictRelation Exceptions Flow FlowSet InhibitorSet List PlaceSet PreventionRelation Relations ReverseCausalityRelation Sets String Transition TransitionSet

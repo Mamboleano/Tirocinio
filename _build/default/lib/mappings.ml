@@ -171,7 +171,8 @@ let to_pCN (p : PES.t) : CN.t =
       transitions = p.events;
       flow = f;
       inhibitors = i;
-      marking = m;
+      initial_marking = m;
+      current_marking = m
     }
 
 let to_rCN (p : ReversiblePES.t) : ReversibleCN.t = 
@@ -249,5 +250,6 @@ let to_rCN (p : ReversiblePES.t) : ReversibleCN.t =
     transitions = t ;
     flow = f ;
     inhibitors = i ;
-    marking = pcn.marking ;
+    initial_marking = pcn.initial_marking ;
+    current_marking = pcn.initial_marking
   }

@@ -102,10 +102,10 @@ let conv_p4 = to_rCN p4;;
 assert(ReversibleCN.is_rCN conv_p4);;
 
 assert(ReversiblePES.is_cause_respecting p3);;
-let exec_seq_1 = ReversiblePES.is_reachable_conf_CR (TransitionSet.of_list [F("b"); F("c"); F("d");]) p3;;
-List.iter (fun x -> Printf.printf "{";
+(*let exec_seq_1 = *)ReversiblePES.is_reachable_conf_CR (TransitionSet.of_list [F("b"); F("c"); F("d");]) p3;;
+(* List.iter (fun x -> Printf.printf "{";
                   TransitionSet.print x;
-                  Printf.printf "}") exec_seq_1;
+                  Printf.printf "}") exec_seq_1; *)
 
 
 (* Testing causally bothering set *)
@@ -117,6 +117,43 @@ assert(ReversibleCN.is_cause_respecting (ReversibleCN.to_causally_respecting_net
 assert(ReversibleCN.is_rCN c5);;
 assert(not(ReversibleCN.is_cause_respecting c5));;
 
+
+assert(not (ReversibleCN.is_enabled_at (TransitionSet.singleton (F("d"))) (TransitionSet.singleton (B("c"))) (PlaceSet.of_list [I(1); I(5); I(7); I(8)]) c3));;
+assert((ReversibleCN.is_enabled_at (TransitionSet.empty) (TransitionSet.singleton (B("c"))) (PlaceSet.of_list [I(1); I(7); I(8); I(9)]) c3));;
+
+ReversibleCN.fire_seq 
+  [
+    (TransitionSet.of_list [F("b") ; F("d")] , TransitionSet.empty); 
+    (TransitionSet.of_list [F("c")] , TransitionSet.empty);
+    (TransitionSet.empty , TransitionSet.of_list [B("c")]);
+  ]
+  c3;;
+
+assert(PlaceSet.equal c3.current_marking (PlaceSet.of_list [I(0); I(1) ; I(4); I(7); I(9)]));;
+ReversibleCN.reset_marking c3;;
+
+(*
+let firing_seq_1 = ReversibleCN.is_reachable_conf_CR (TransitionSet.of_list [F("b"); F("c"); F("d")]) c3;;
+List.iter (fun x -> Printf.printf "{";
+                  TransitionSet.print x;
+                  Printf.printf "}") firing_seq_1;
+
+*)
+
+(* ReversibleCN.exec_seq 
+  [
+    (TransitionSet.singleton (F "b") , TransitionSet.empty);
+    (TransitionSet.singleton (F "d") , TransitionSet.singleton (B "b"));
+    (TransitionSet.singleton (F "c") , TransitionSet.empty);
+    (TransitionSet.empty, TransitionSet.singleton (F "c"));
+  ]
+  c3;;
+assert(TransitionSet.equal (p3.current_configuration) (TransitionSet.of_list [F "a"; F "d"]));;
+ReversiblePES.reset_conf p3;;
+*)
+
+
+
 (* TransitionSet.print (ReversibleCN.causal_bothering_set c5);; *)
 (*ReversiblePES.print (to_rPES c5);;*)
 
@@ -126,11 +163,10 @@ let prova_list = ReversiblePES.order_transition_sets_with_causality (p3.events) 
 List.iter (TransitionSet.print) prova_list;;
 *)
 
-
 assert(ReverseCausalityRelation.is_causal_reversibility p5.rev_causality);;
 
-let exec_seq_2 = ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"])) p5;;
-print_endline (TransitionSet.list_to_string exec_seq_2);;
+(* let exec_seq_2 = *)ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"])) p5;;
+(* print_endline (TransitionSet.list_to_string exec_seq_2);; *)
 
 ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"c"])) p5;;
 ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"; F"d"])) p5;;
@@ -142,6 +178,22 @@ ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"])) p5;;
 ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"])) p5;;
 ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"a"; F"a"])) p5;;
 ReversiblePES.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"; F"c"])) p5;;
+
+assert(not (ReversibleCN.is_cause_respecting c4));;
+assert(ReverseCausalityRelation.is_causal_reversibility (ReversibleCN.reverse_causality_relation c4));;
+
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"d"; F"c"])) c4;;
+let fire_seq_2 = ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"a"; F"c"])) c4;;
+print_endline (TransitionSet.list_to_string fire_seq_2);;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"c"; F"a"; F"d"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"c"; F"d"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"a"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"b"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"c"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"d"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"a"; F"a"])) c4;;
+ReversibleCN.is_reachable_conf (TransitionSet.of_list ([F"d"; F"a"; F"c"])) c4;;
 
 
 print_endline "passed all tests";;

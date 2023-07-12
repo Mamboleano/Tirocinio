@@ -27,4 +27,4 @@ let f = FlowSet.of_list [
 let i = InhibitorSet.of_list [{source = S(I(3)); target = T(F "c")}];;
 let m = PlaceSet.of_list [I(0); I(1); I(2); I(3); I(4); I(5)];;
 
-let c2 : IPT.t = {places = s; transitions = t; flow = f; inhibitors = i; marking = m};;
+let c2 : IPT.t = {places = s; transitions = t; flow = f; inhibitors = i; initial_marking = m; current_marking = m};;

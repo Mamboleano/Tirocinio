@@ -1,7 +1,6 @@
 open Sets;;
 open Exceptions;;
 open Relations;;
-open Reachability;;
 
 module IPT = 
 struct
@@ -11,7 +10,8 @@ struct
         mutable transitions : TransitionSet.t;
         mutable flow : FlowSet.t;
         mutable inhibitors : InhibitorSet.t;
-        mutable marking : PlaceSet.t;
+        mutable initial_marking : PlaceSet.t;
+        mutable current_marking : PlaceSet.t;
       }
 
       let build s t f i m net = 
@@ -19,7 +19,11 @@ struct
         net.transitions <- t;
         net.flow <- f;
         net.inhibitors <- i;
-        net.marking <- m
+        net.initial_marking <- m;
+        net.current_marking <- m
+      
+      let reset_marking ipt =
+        ipt.current_marking <- ipt.initial_marking
 
       (* We say that an arc n1 -> n2 is valid iff n1 is a Place that belongs to S and n2 is a Transition that belongs to T or viceversa *)
       let valid_arc (arc : Flow.t) ipt = match arc with
@@ -48,8 +52,8 @@ struct
       print_endline "\nInhibitor arcs:";
       InhibitorSet.print ipt.inhibitors;
     
-      print_endline "\nMarking:";
-      PlaceSet.print ipt.marking
+      print_endline "\nInitial marking:";
+      PlaceSet.print ipt.initial_marking
 
     (* This function returns the transitions for which the place s is the output *)
     let preset_of_place s ipt =
@@ -118,9 +122,9 @@ struct
       let postset_a = postset_of_TransitionSet a ipt in
       let inhibset_a = inhibitors_of_TransitionSet a ipt in 
     
-      (PlaceSet.subset preset_a ipt.marking)
+      (PlaceSet.subset preset_a ipt.current_marking)
       &&
-      (PlaceSet.for_all (fun x ->  not (PlaceSet.mem x ipt.marking) && not (PlaceSet.mem x postset_a)) inhibset_a)
+      (PlaceSet.for_all (fun x ->  not (PlaceSet.mem x ipt.current_marking) && not (PlaceSet.mem x postset_a)) inhibset_a)
     
     
     (* Given a set of transitions a, this function fires a at the current marking of ipt,
@@ -130,7 +134,7 @@ struct
       let postset_a = postset_of_TransitionSet a ipt in
 
       if is_enabled a ipt then
-        ipt.marking <- PlaceSet.union (PlaceSet.diff ipt.marking preset_a) postset_a
+        ipt.current_marking <- PlaceSet.union (PlaceSet.diff ipt.current_marking preset_a) postset_a
 
 
     (* returns true iff t <. t'*)
@@ -268,8 +272,8 @@ include IPT
   (* This function checks that the initial marking of the ipt is a subset of the preset of all the transitions,
       and that inhibitors of the ipt have places only present in the initial marking *)
   let correct_marking ipt = 
-    let b1 = PlaceSet.equal (preset_of_TransitionSet ipt.transitions ipt) ipt.marking in
-    let b2 = PlaceSet.subset (inhibitors_of_TransitionSet ipt.transitions ipt) ipt.marking in
+    let b1 = PlaceSet.equal (preset_of_TransitionSet ipt.transitions ipt) ipt.initial_marking in
+    let b2 = PlaceSet.subset (inhibitors_of_TransitionSet ipt.transitions ipt) ipt.initial_marking in
 
     b1 && b2
   
@@ -338,6 +342,53 @@ include CN
       (backward_transitions ipt)
       (TransitionSet.empty)
 
+  let reverse_causality_relation ipt = 
+    TransitionSet.fold 
+    (fun t rc -> 
+
+        ReverseCausalityRelation.union
+        (TransitionSet.fold 
+        (fun t' rc' -> 
+
+          if(PlaceSet.equal 
+            (PlaceSet.inter (preset_of_transition t ipt) (inhibitors_of_transition t' ipt)) 
+            (PlaceSet.empty)) then 
+              rc'
+          else
+            ReverseCausalityRelation.add {cause = t; rev = t'} rc'
+          
+        
+        ) 
+        (backward_transitions ipt)
+        (ReverseCausalityRelation.empty))
+        rc
+    )
+    (forward_transitions ipt)
+    (ReverseCausalityRelation.empty)
+
+  let prevention_relation ipt = 
+    TransitionSet.fold 
+    (fun t pr -> 
+
+        PreventionRelation.union
+        (TransitionSet.fold 
+        (fun t' pr' -> 
+
+          if(PlaceSet.equal 
+            (PlaceSet.inter (postset_of_transition t ipt) (inhibitors_of_transition t' ipt)) 
+            (PlaceSet.empty)) then 
+              pr'
+          else
+            PreventionRelation.add {preventing = t; prevented = t'} pr'
+          
+        
+        ) 
+        (backward_transitions ipt)
+        (PreventionRelation.empty))
+        pr
+    )
+    (forward_transitions ipt)
+    (PreventionRelation.empty)
   
   let sustained_causation ipt = 
     CausalityRelation.fold
@@ -386,7 +437,8 @@ include CN
        transitions = forward_transitions ipt;
        flow = forward_flow;
        inhibitors = forward_inhibitors;
-       marking = ipt.marking
+       initial_marking = ipt.initial_marking;
+       current_marking = ipt.initial_marking
       }
     in
 
@@ -514,31 +566,37 @@ include CN
   (* Given a set of forward transitions a and a set of backwards transitions b, this function returns true iff (a U b) is enabled at the current marking of the ipt *)
   let is_enabled_at a b m ipt =
     let preset_ab = preset_of_TransitionSet (TransitionSet.union a b) ipt in
-    let postset_ab = postset_of_TransitionSet (TransitionSet.union a b) ipt in
+    let postset_a = postset_of_TransitionSet a ipt in
     let inhibset_ab = inhibitors_of_TransitionSet (TransitionSet.union a b) ipt in 
   
     (PlaceSet.subset preset_ab m)
     &&
     (PlaceSet.for_all 
-    (fun x ->  not (PlaceSet.mem x m) && not (PlaceSet.mem x postset_ab))
+    (fun x ->  not (PlaceSet.mem x m) && not (PlaceSet.mem x postset_a))
      inhibset_ab
     )
 
-  let fire_seq a b m ipt = 
-    if (is_enabled_at a b m ipt) then 
+  let fire_set a b ipt = 
+    if (is_enabled_at a b ipt.current_marking ipt) then 
       let new_m = PlaceSet.union 
                   (PlaceSet.diff 
                     (PlaceSet.union 
-                      (PlaceSet.diff m (preset_of_TransitionSet a ipt))
+                      (PlaceSet.diff ipt.current_marking (preset_of_TransitionSet a ipt))
                       (postset_of_TransitionSet a ipt)) 
                     (preset_of_TransitionSet b ipt)) 
                   (postset_of_TransitionSet b ipt)
       in
 
-      new_m
+      ipt.current_marking <- new_m
 
     else
       raise SequenceNotEnabled
+  
+  let fire_seq seq c = 
+    List.iter
+    (fun s -> match s with 
+      a,b -> fire_set a b c)
+    seq
     
 
   (* This set contains only reversable transition ,so we iterate on the backwards 
@@ -621,7 +679,8 @@ include CN
       transitions = rCN.transitions;
       flow = rCN.flow;
       inhibitors = i';
-      marking = rCN.marking;
+      initial_marking = rCN.initial_marking;
+      current_marking = rCN.initial_marking
     }
   
   let is_reachable_conf_CR x v = 
@@ -676,21 +735,329 @@ include CN
 
         in
 
-        let (remaining_events, firing_seq) = helper new_x (v.marking) [] in 
+        let (remaining_events, firing_seq) = helper new_x (v.initial_marking) [] in 
 
         if (TransitionSet.is_empty remaining_events) then 
-          Reachable firing_seq
+          firing_seq
 
         else 
-          Not_Reachable
+          raise (NotReachable "Could not fire all the remaining transitions")
 
 
       else
-        Not_Reachable
+        raise (NotReachable "Condiguration target is not conflict free")
 
 
     else
       raise NonCauseRespecting;;
+
+  
+  let order_transition_sets_with_causality ts c_relation = 
+    let aux remaining_transitions enabler cr = 
+      TransitionSet.fold 
+      (fun t tt -> 
+        if (TransitionSet.subset (CausalityRelation.causes_of t cr) enabler) then 
+          TransitionSet.add t tt 
+        else
+          tt
+      )
+      (remaining_transitions)
+      (TransitionSet.empty)
+    in
+
+    let rec helper remaining_transitions enabler cr ordered_list = 
+
+      let enabled_transitions = aux remaining_transitions enabler cr 
+    
+      in 
+
+      if(TransitionSet.equal enabled_transitions (TransitionSet.empty)) then 
+        ordered_list 
+
+      else
+        helper 
+              (TransitionSet.diff remaining_transitions enabled_transitions)
+              (TransitionSet.union enabler enabled_transitions)
+              cr 
+              (ordered_list @ [enabled_transitions])
+
+    in
+
+    helper ts (TransitionSet.empty) c_relation []
+
+
+  let order_transitions_with_causality ts c_relation = 
+    let list_of_sets = order_transition_sets_with_causality ts c_relation in 
+
+    let rec aux l_sets l_trans= match l_sets with 
+      | [] -> l_trans
+      | t::l -> aux l (l_trans @ TransitionSet.elements t)
+
+    in
+    aux list_of_sets []
+  
+  
+  let order_backward_transition_sets_with_prevention ts prevention = 
+    let aux remaining_transitions conf pr = 
+      TransitionSet.fold 
+      (fun t tt -> 
+        if (TransitionSet.equal 
+              (TransitionSet.inter 
+                (conf)
+                (PreventionRelation.preventing_of_rev t pr))
+              (TransitionSet.empty)
+            ) then 
+          TransitionSet.add t tt 
+        else
+          tt
+      )
+      (remaining_transitions)
+      (TransitionSet.empty)
+    in
+
+    let rec helper remaining_transitions conf pr ordered_list = 
+
+      let undoable_transitions = aux remaining_transitions conf pr 
+    
+      in 
+
+      if(TransitionSet.equal undoable_transitions (TransitionSet.empty)) then 
+        ordered_list 
+
+      else
+        let reversed_transitions = 
+          TransitionSet.fold
+          (fun t tt -> TransitionSet.add (F(Transition.label t)) tt)
+          (undoable_transitions)
+          (TransitionSet.empty)
+        in
+
+        helper 
+              (TransitionSet.diff remaining_transitions undoable_transitions)
+              (TransitionSet.diff conf reversed_transitions)
+              pr 
+              (ordered_list @ [undoable_transitions])
+
+    in
+
+    helper ts ts prevention []
+
+
+  let order_transitions_with_prevention ts pr = 
+    let list_of_sets = order_backward_transition_sets_with_prevention ts pr in 
+
+    let rec aux l_sets l_trans= match l_sets with 
+      | [] -> l_trans
+      | t::l -> aux l (l_trans @ TransitionSet.elements t)
+
+    in
+    aux list_of_sets []
+  
+
+  let is_reachable_conf x c = 
+
+    if not ((TransitionSet.subset x c.transitions) &&
+      (is_rCN c) &&
+      (conflict_free_set x c) &&
+      (ReverseCausalityRelation.is_causal_reversibility (reverse_causality_relation c))
+    ) then (
+      reset_marking c;
+      raise FailedRequirements 
+    )
+      
+    else
+
+    let update_marking t = 
+      c.current_marking <- PlaceSet.union (PlaceSet.diff c.current_marking (preset_of_transition t c)) (postset_of_transition t c)
+    in
+
+    let rec find_target ts ts_list = 
+      match ts_list with 
+        | [] ->
+            (reset_marking c;
+            raise (NotReachable "Did not find target"))
+        | t::l -> 
+          let rev_events = 
+            TransitionSet.fold 
+            (fun t' tt -> 
+              if (TransitionSet.mem (B(Transition.label t')) (backward_transitions c)) then 
+                TransitionSet.add (B(Transition.label t')) tt
+              else
+                tt
+              )
+            (CausalityRelation.causes_of_TransitionSet (TransitionSet.diff ts (TransitionSet.singleton t)) (causality_relation c))
+            (TransitionSet.empty)
+          in
+
+          (*
+          print_endline (String.concat " " [
+        "Rev events : " ; 
+        (TransitionSet.list_to_string (TransitionSet.elements rev_events)) ; 
+        "current transition : " ; 
+        (Transition.to_string t);
+        "preventing set : ";
+        (TransitionSet.list_to_string (TransitionSet.elements (PreventionRelation.preventing_of_rev_set rev_events p.prevention)))
+        
+      ]);*)
+          
+          if ((CN.conflict_free_set 
+                      (TransitionSet.union 
+                        (TransitionSet.singleton t)
+                        (CausalityRelation.causes_of_TransitionSet (TransitionSet.diff ts (TransitionSet.singleton t)) (causality_relation c)))
+                        c)
+                        &&
+                        (not (TransitionSet.mem t (PreventionRelation.preventing_of_rev_set rev_events (prevention_relation c))))
+                      )
+                  then 
+                    t 
+
+                  else
+                    find_target ts l
+    in 
+
+    let rec add_causes_target causes_list target enabler seq_list = 
+      match causes_list with 
+        | [] when (is_enabled_at (TransitionSet.singleton target) (TransitionSet.empty) c.current_marking c) -> 
+            update_marking target;
+            ((TransitionSet.add target enabler), (seq_list @ [target]))
+
+        | t::l when (is_enabled_at (TransitionSet.singleton t) (TransitionSet.empty) c.current_marking c) ->
+            update_marking t;
+            add_causes_target l target (TransitionSet.add t enabler) (seq_list @ [t])
+
+        | _ -> 
+            (reset_marking c;
+            raise (NotReachable "cannot add target causes"))
+    
+    in
+
+    let rec remove_causes_target reverse_causes_list enabler seq_list = 
+      match reverse_causes_list with 
+        | [] -> (enabler, seq_list)
+
+        | t::l when (TransitionSet.mem (F(Transition.label t)) x) -> 
+          remove_causes_target l enabler seq_list
+
+        | t::l when (is_enabled_at (TransitionSet.empty) (TransitionSet.singleton t) c.current_marking c) ->
+            update_marking t;
+            remove_causes_target l (TransitionSet.diff enabler (TransitionSet.singleton (F(Transition.label t)))) (seq_list @ [t])
+
+        | _ -> 
+            (reset_marking c;
+            raise (NotReachable "Cannot reverse causes of target"))
+    
+    in
+
+    let rec handle_sub_x executed_transitions remaining_transitions aux_Y seq_list sub_x = 
+
+      (* 
+      DEBUG PRINTS
+      
+
+      print_endline (String.concat " " [
+        "Chiamata handle_sub_x : executed_transitions : " ; 
+        (TransitionSet.list_to_string (TransitionSet.elements executed_transitions)) ; 
+        "remaining_transitions : " ; 
+        (TransitionSet.list_to_string (TransitionSet.elements remaining_transitions)) ;
+        "aux_Y : " ; 
+        (TransitionSet.list_to_string (TransitionSet.elements aux_Y)) ;
+      ]);
+      *)
+
+      
+
+      if((TransitionSet.equal remaining_transitions (TransitionSet.empty)) && (TransitionSet.equal executed_transitions sub_x)) then 
+        (aux_Y , seq_list)
+
+      else 
+        
+        (* First we find the target transition to fire *)
+        let target = find_target remaining_transitions (TransitionSet.elements remaining_transitions) in 
+        
+        (* Then we find the causes of such target that we need to add in order to fire it *)
+        let cause_target_list = order_transitions_with_causality (CausalityRelation.causes_of target (causality_relation c)) (causality_relation c) in
+
+        (* Every cause must be reversable *)
+        let rec reverse_cause_target c_list r_set = match c_list with 
+          | [] -> r_set
+          | t::l when (TransitionSet.mem (B(Transition.label t)) (backward_transitions c)) -> reverse_cause_target l (TransitionSet.add (B(Transition.label t)) r_set)
+          | _ -> 
+            ( 
+              reset_marking c;
+              raise (NotReachable "there is some target cause that is not reversible")
+            )
+            
+        in
+
+        (* The causality closure of target must be conflict free, otherwise we cannot reach the configuration *)
+        if(CN.conflict_free_set (CausalityRelation.causes_of target (causality_relation c)) c) then 
+          
+          (* We then update the enabler and the firing sequence after the causes of target, and target itself, have been fired *)
+          let (aux_Y' , seq_list') = 
+            if(TransitionSet.subset (CausalityRelation.causes_of target (causality_relation c)) aux_Y) then 
+              ( (TransitionSet.add target aux_Y) , (seq_list @ [target])) 
+            else
+              add_causes_target cause_target_list target aux_Y seq_list
+          in
+
+          (* This is the list ordered to reverse the causes of target, since they are not part of the final configuration we need to clean them *)
+          let reverse_cause_target_list = order_transitions_with_prevention (reverse_cause_target cause_target_list TransitionSet.empty) (prevention_relation c) in
+
+          (* 
+          DEBUG PRINTS
+
+          print_endline (String.concat " " [
+          "causes_of_target : " ; 
+          (TransitionSet.list_to_string cause_target_list) ;
+          "reverse_causes_of_target : " ; 
+          (TransitionSet.list_to_string reverse_cause_target_list) ;
+          "aux_Y' : " ; 
+          (TransitionSet.list_to_string (TransitionSet.elements aux_Y')) ;
+          ]);
+          *)
+          
+          (* At this point the aux_Y should contain only the target in addition to before *)
+          let (aux_Y'' , seq_list'') = remove_causes_target reverse_cause_target_list aux_Y' seq_list' in
+          let new_executed_transitions = TransitionSet.add target executed_transitions in 
+          let new_remaining_transitions = TransitionSet.diff remaining_transitions (TransitionSet.singleton target) in
+
+          handle_sub_x new_executed_transitions new_remaining_transitions aux_Y'' seq_list'' sub_x
+
+
+        else(
+          reset_marking c;
+          raise (NotReachable "causes of target are in conflict"))
+
+
+    in
+
+    let rec handle_sub_x_list list y seq_list = match list with 
+      | [] -> (y, seq_list)
+      | x::l -> 
+          let (new_y, new_seq_list) = handle_sub_x (TransitionSet.empty) x y seq_list x in 
+
+          handle_sub_x_list l new_y new_seq_list 
+    in
+
+
+    let sub_x_list = order_transition_sets_with_causality x (sustained_causation c) in
+    let (final_y , final_seq_list) = handle_sub_x_list sub_x_list (TransitionSet.empty) [] in 
+
+    if(TransitionSet.equal final_y x) then 
+      (reset_marking c;
+      final_seq_list)
+
+    else
+      (reset_marking c;
+      raise (NotReachable (String.concat " " ["final y is not requested configuration, y: ";
+                            (TransitionSet.list_to_string (TransitionSet.elements final_y)) ;
+                            " final_seq: " ; 
+                            (TransitionSet.list_to_string final_seq_list);
+                            " requested x: ";
+                            (TransitionSet.list_to_string (TransitionSet.elements x)) ; 
+                            " sub_x_list : " ; 
+                            (TransitionSet.list_of_sets_to_string sub_x_list)])))
+    
 
 
 end;;

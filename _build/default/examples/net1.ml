@@ -29,4 +29,5 @@ let c1 : IPT.t = {places = s;
                   transitions = t;
                   flow = f;
                   inhibitors = i;
-                  marking = m};;
+                  initial_marking = m;
+                  current_marking = m};;
